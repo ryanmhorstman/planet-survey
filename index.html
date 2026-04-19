@@ -1881,10 +1881,67 @@
       : parseFloat(physics.gravityG) < 0.5 ? 'towering geological spires and impossibly tall cliffs'
       : 'Earth-like terrain scale';
 
-    return `Photorealistic ground-level photograph standing on the surface of an alien exoplanet. ${planet.surfaceFeatures || visuals.imgDesc}. ${skyDesc} overhead. ${tempFeel} surface conditions. ${gravFeel}. A ${starDesc} visible in the sky as the light source. Alien landscape stretching to horizon, no humans or man-made objects. Cinematic, scientifically plausible. NO TEXT, NO LABELS, NO ANNOTATIONS of any kind. Pure alien world, ground level perspective.`;
+    const vegDesc = getVegetationDesc(starType, planet.lifelyLife, physics.gravityG, atmosphere);
+    const vegSurface = vegDesc.surface ? vegDesc.surface : 'barren alien terrain, no visible vegetation.';
+
+    return `Photorealistic ground-level photograph standing on the surface of an alien exoplanet. ${planet.surfaceFeatures || visuals.imgDesc}. ${skyDesc} overhead. ${tempFeel} surface conditions. ${gravFeel}. ${vegSurface} A ${starDesc} visible in the sky as the light source. Alien landscape stretching to horizon, no humans or man-made objects. Cinematic, scientifically plausible. NO TEXT, NO LABELS, NO ANNOTATIONS of any kind. Pure alien world, ground level perspective.`;
   }
 
-  async function switchView(mode) {
+  // ── VEGETATION LOOKUP ──
+  function getVegetationDesc(starType, lifelyLife, gravityG, atmosphere) {
+    const life = lifelyLife || '';
+    const hasComplexLife = life.includes('Complex') || life.includes('Intelligent');
+    const hasMicrobial = life.includes('Microbial');
+
+    if (!hasComplexLife && !hasMicrobial) return { orbital: '', surface: '' };
+    if (atmosphere.includes('none') || atmosphere.includes('hydrogen') || atmosphere.includes('CO2')) return { orbital: '', surface: '' };
+
+    const grav = parseFloat(gravityG);
+    const floraHeight = grav > 1.8 ? 'wide, flat, mat-like ground-hugging vegetation, very low canopy forced down by gravity'
+      : grav > 1.3 ? 'squat dense forest canopy, thick-trunked trees with broad spreading crowns'
+      : grav < 0.4 ? 'impossibly tall spindly alien trees reaching hundreds of meters, needle-thin trunks'
+      : grav < 0.7 ? 'tall graceful alien trees with wide spread canopies, taller than Earth equivalents'
+      : 'Earth-scale forest canopy height';
+
+    // Star-specific photosynthesis pigment science
+    let colors, orbitalColor, sciNote;
+
+    if (starType.includes('M-type')) {
+      colors = 'near-black or deep crimson vegetation';
+      orbitalColor = 'near-black and deep crimson landmass coverage, maximizing absorption of dim infrared-heavy red dwarf light';
+      sciNote = 'dark pigmentation evolved to capture maximum photons from dim red dwarf';
+    } else if (starType.includes('K-type')) {
+      colors = 'deep rust-orange and dark burgundy vegetation';
+      orbitalColor = 'rust-orange and burgundy-brown landmass coloring, vegetation absorbing orange dwarf spectrum';
+      sciNote = 'rust-orange pigments tuned to K-dwarf orange-shifted spectrum';
+    } else if (starType.includes('F-type')) {
+      colors = 'silvery-white or pale sage reflective vegetation';
+      orbitalColor = 'silvery-white and pale sage landmass patches, reflective vegetation evolved against intense UV from blue-white star';
+      sciNote = 'highly reflective pale pigmentation evolved to deflect intense UV radiation';
+    } else if (starType.includes('binary')) {
+      colors = 'mottled two-tone violet and amber vegetation';
+      orbitalColor = 'mottled violet and amber-gold landmass patches, dual-pigment vegetation adapted to two-star spectrum';
+      sciNote = 'dual pigmentation evolved to harvest two different stellar spectra';
+    } else {
+      // G-type — could be green OR purple (retinal-based is older than chlorophyll)
+      const isPurple = Math.random() > 0.5;
+      colors = isPurple ? 'deep purple and violet vegetation (retinal-based photosynthesis)' : 'dark green and teal vegetation';
+      orbitalColor = isPurple ? 'deep purple and violet landmass coverage, retinal-based photosynthesis' : 'dark green and teal continental coverage, chlorophyll-based photosynthesis';
+      sciNote = isPurple ? 'retinal-based photosynthesis, evolutionarily older than chlorophyll' : 'chlorophyll-based photosynthesis similar to Earth';
+    }
+
+    if (hasMicrobial && !hasComplexLife) {
+      return {
+        orbital: `Faint microbial mat coloring on exposed rock surfaces — thin ${orbitalColor.split(',')[0]} biological crust visible in sheltered areas only.`,
+        surface: `Thin biological crusts of ${colors} coat sheltered rock faces and pooled water margins. No macroscopic flora. ${sciNote}.`
+      };
+    }
+
+    return {
+      orbital: `Landmasses show clear ${orbitalColor}. ${floraHeight} visible as texture variation on continental surfaces.`,
+      surface: `${floraHeight.charAt(0).toUpperCase() + floraHeight.slice(1)} of ${colors} cover much of the terrain. ${sciNote}. Alien flora dominates the landscape.`
+    };
+  }
     document.getElementById('btnOrbital').classList.toggle('active', mode === 'orbital');
     document.getElementById('btnSurface').classList.toggle('active', mode === 'surface');
 
@@ -1994,7 +2051,7 @@
   }
 
   async function fetchAndRender(query) {
-    const url = `https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=${query}&format=json`;
+    const url = `/api/exoplanets?query=${query}`;
     try {
       const res = await fetch(url);
       const data = await res.json();
@@ -2338,8 +2395,9 @@ Respond ONLY with valid JSON, no markdown, no backticks:
         const extraContext = [gravDesc, tiltDesc, tempDesc].filter(Boolean).join(', ');
 
         const surfaceDetail = planet.surfaceFeatures ? planet.surfaceFeatures : '';
+        const vegDesc = getVegetationDesc(starType, planet.lifelyLife, physics.gravityG, atmosphere);
 
-        const imagePrompt = `Photorealistic space photograph of an exoplanet. ${visuals.imgDesc}. ${surfaceDetail} ${waterDesc}. ${extraContext ? extraContext + '.' : ''} The planet fills 70% of the frame, centered. A ${starDesc} is visible near the edge of the frame as the light source, casting dramatic one-sided illumination across the planet. Pure black background everywhere else. NO galaxies, NO nebulae, NO dust lanes, NO milky way, NO star fields, NO other objects. NO TEXT, NO LABELS, NO ANNOTATIONS of any kind.`;
+        const imagePrompt = `Photorealistic space photograph of an exoplanet. ${visuals.imgDesc}. ${surfaceDetail} ${waterDesc}. ${vegDesc.orbital ? vegDesc.orbital : ''} ${extraContext ? extraContext + '.' : ''} The planet fills 70% of the frame, centered. A ${starDesc} is visible near the edge of the frame as the light source, casting dramatic one-sided illumination across the planet. Pure black background everywhere else. NO galaxies, NO nebulae, NO dust lanes, NO milky way, NO star fields, NO other objects. NO TEXT, NO LABELS, NO ANNOTATIONS of any kind.`;
 
         const imgRes = await fetch('/api/image', {
           method: 'POST',
