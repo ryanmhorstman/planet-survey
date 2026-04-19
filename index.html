@@ -1884,7 +1884,7 @@
     const vegDesc = getVegetationDesc(starType, planet.lifelyLife, physics.gravityG, atmosphere);
     const vegSurface = vegDesc.surface ? vegDesc.surface : 'barren alien terrain, no visible vegetation.';
 
-    return `Photorealistic ground-level photograph standing on the surface of an alien exoplanet. ${planet.surfaceFeatures || visuals.imgDesc}. ${skyDesc} overhead. ${tempFeel} surface conditions. ${gravFeel}. ${vegSurface} A ${starDesc} visible in the sky as the light source. Alien landscape stretching to horizon, no humans or man-made objects. Cinematic, scientifically plausible. NO TEXT, NO LABELS, NO ANNOTATIONS of any kind. Pure alien world, ground level perspective.`;
+    return `Photorealistic ground-level photograph standing on the surface of an alien exoplanet. ${planet.surfaceFeatures || visuals.imgDesc}. ${skyDesc} overhead. ${tempFeel} surface conditions. ${gravFeel}. ${vegSurface} A ${starDesc} visible in the sky as the only object — NO planets, NO moons, NO other celestial bodies visible in the sky. Alien landscape stretching to horizon, no humans or man-made objects. Purely alien terrain with no resemblance to Earth geography. Cinematic, scientifically plausible. NO TEXT, NO LABELS, NO ANNOTATIONS of any kind.`;
   }
 
   // ── VEGETATION LOOKUP ──
@@ -2399,7 +2399,7 @@ Respond ONLY with valid JSON, no markdown, no backticks:
         const surfaceDetail = planet.surfaceFeatures ? planet.surfaceFeatures : '';
         const vegDesc = getVegetationDesc(starType, planet.lifelyLife, physics.gravityG, atmosphere);
 
-        const imagePrompt = `Photorealistic space photograph of an exoplanet. ${visuals.imgDesc}. ${surfaceDetail} ${waterDesc}. ${vegDesc.orbital ? vegDesc.orbital : ''} ${extraContext ? extraContext + '.' : ''} The planet fills 70% of the frame, centered. A ${starDesc} is visible near the edge of the frame as the light source, casting dramatic one-sided illumination across the planet. Pure black background everywhere else. NO galaxies, NO nebulae, NO dust lanes, NO milky way, NO star fields, NO other objects. NO TEXT, NO LABELS, NO ANNOTATIONS of any kind.`;
+        const imagePrompt = `Photorealistic space photograph of an exoplanet. ${visuals.imgDesc}. ${surfaceDetail} ${waterDesc}. ${vegDesc.orbital ? vegDesc.orbital : ''} ${extraContext ? extraContext + '.' : ''} Continent shapes bear NO resemblance to Earth — purely alien, unrecognizable landmass outlines. The planet fills 70% of the frame, centered. A ${starDesc} is visible near the edge of the frame as the light source, casting dramatic one-sided illumination across the planet. Pure black background everywhere else. NO galaxies, NO nebulae, NO dust lanes, NO milky way, NO star fields, NO other objects. NO TEXT, NO LABELS, NO ANNOTATIONS of any kind.`;
 
         const imgRes = await fetch('/api/image', {
           method: 'POST',
