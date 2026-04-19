@@ -995,6 +995,36 @@
     border: 1px solid var(--gold-rule);
   }
   .lightbox-download:hover { border-color: var(--gold-bright); color: var(--gold-bright); }
+
+  /* ── VIEW TOGGLE ── */
+  .view-toggle {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    z-index: 3;
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--gold-rule);
+  }
+  .view-toggle-btn {
+    background: rgba(26,22,18,0.75);
+    border: none;
+    color: var(--ink-dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    padding: 5px 10px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    border-right: 1px solid var(--gold-rule);
+  }
+  .view-toggle-btn:last-child { border-right: none; }
+  .view-toggle-btn.active { background: rgba(138,108,32,0.3); color: var(--gold-light); }
+  .view-toggle-btn:hover:not(.active) { color: var(--gold); }
+
+  /* Water disabled state */
+  .slider-disabled { opacity: 0.35; pointer-events: none; }
 </style>
 </head>
 <body>
@@ -1087,7 +1117,7 @@
           <span class="param-label">Atmosphere</span>
           <span class="param-code">A-03</span>
         </div>
-        <select class="param-select" id="atmosphere">
+        <select class="param-select" id="atmosphere" onchange="handleAtmosphereChange(this.value)">
           <option value="nitrogen-oxygen (Earth-like)">N₂/O₂ — Earth-like</option>
           <option value="thick CO2 (Venus-like)">CO₂ Dense — Venus-like</option>
           <option value="thin nitrogen">N₂ Thin</option>
@@ -1180,9 +1210,14 @@
       <div class="planet-view">
         <div class="planet-sphere" id="planetSphere"></div>
         <img id="planetImage" style="display:none; width:100%; height:100%; object-fit:cover; position:absolute; inset:0;" alt="Planet render">
+        <img id="surfaceImage" style="display:none; width:100%; height:100%; object-fit:cover; position:absolute; inset:0;" alt="Surface render">
         <div class="planet-name-display" id="planetNameDisplay"></div>
         <div class="planet-class-display" id="planetClassDisplay"></div>
         <div class="planet-label" id="planetLabel">OPTICAL ARRAY — COMPOSITE RENDER</div>
+        <div class="view-toggle" id="viewToggle" style="display:none">
+          <button class="view-toggle-btn active" id="btnOrbital" onclick="switchView('orbital')">Orbital</button>
+          <button class="view-toggle-btn" id="btnSurface" onclick="switchView('surface')">Surface</button>
+        </div>
       </div>
 
       <div class="stats-row">
@@ -1718,6 +1753,105 @@
     document.getElementById('tiltVal').textContent = tilt + '°';
   }
 
+  // ── ATMOSPHERE CHANGE — lock water on airless ──
+  function handleAtmosphereChange(val) {
+    const waterRow = document.getElementById('waterCoverage').closest('.slider-row');
+    const waterLabel = document.getElementById('waterVal');
+    const isAirless = val.includes('none');
+    const isGas = val.includes('hydrogen');
+    if (isAirless || isGas) {
+      document.getElementById('waterCoverage').value = 0;
+      waterLabel.textContent = '0%';
+      waterRow.classList.add('slider-disabled');
+    } else {
+      waterRow.classList.remove('slider-disabled');
+    }
+  }
+
+  // ── SURFACE VIEW ──
+  let currentSurfaceImgSrc = null;
+  let currentSurfacePrompt = '';
+
+  function buildSurfacePrompt(planet, visuals, starType, starDesc, physics, atmosphere, tilt, water) {
+    const skyDesc = atmosphere.includes('CO2') ? 'thick orange-yellow toxic sky'
+      : atmosphere.includes('methane') ? 'murky orange-brown hazy sky'
+      : atmosphere.includes('thin') ? 'thin pale sky, almost space-like at zenith'
+      : atmosphere.includes('none') ? 'no sky, raw black space overhead with stars'
+      : atmosphere.includes('hydrogen') ? 'pale grey-blue hazy overcast sky'
+      : 'alien sky';
+
+    const tempFeel = parseFloat(physics.surfTempC) > 60 ? 'scorched, shimmering heat'
+      : parseFloat(physics.surfTempC) < -30 ? 'frozen, frost-covered ground'
+      : 'temperate, habitable-feeling';
+
+    const gravFeel = parseFloat(physics.gravityG) > 1.5 ? 'heavy, crushed-feeling low terrain'
+      : parseFloat(physics.gravityG) < 0.5 ? 'towering geological spires and impossibly tall cliffs'
+      : 'Earth-like terrain scale';
+
+    return `Photorealistic ground-level photograph standing on the surface of an alien exoplanet. ${planet.surfaceFeatures || visuals.imgDesc}. ${skyDesc} overhead. ${tempFeel} surface conditions. ${gravFeel}. A ${starDesc} visible in the sky as the light source. Alien landscape stretching to horizon, no humans or man-made objects. Cinematic, scientifically plausible. NO TEXT, NO LABELS, NO ANNOTATIONS of any kind. Pure alien world, ground level perspective.`;
+  }
+
+  async function switchView(mode) {
+    document.getElementById('btnOrbital').classList.toggle('active', mode === 'orbital');
+    document.getElementById('btnSurface').classList.toggle('active', mode === 'surface');
+
+    const imgEl = document.getElementById('planetImage');
+    const surfEl = document.getElementById('surfaceImage');
+    const sphere = document.getElementById('planetSphere');
+
+    if (mode === 'orbital') {
+      surfEl.style.display = 'none';
+      imgEl.style.display = 'block';
+      sphere.style.display = 'none';
+      document.getElementById('planetLabel').textContent = 'CLICK TO EXPAND';
+      imgEl.onclick = () => openLightbox(imgEl.src, null);
+      return;
+    }
+
+    // Surface mode
+    if (currentSurfaceImgSrc) {
+      imgEl.style.display = 'none';
+      sphere.style.display = 'none';
+      surfEl.src = currentSurfaceImgSrc;
+      surfEl.style.display = 'block';
+      surfEl.onclick = () => openLightbox(currentSurfaceImgSrc, null);
+      document.getElementById('planetLabel').textContent = 'CLICK TO EXPAND';
+      return;
+    }
+
+    // Generate on demand
+    document.getElementById('planetLabel').textContent = 'RENDERING SURFACE VIEW...';
+    imgEl.style.display = 'none';
+    sphere.style.display = 'block';
+
+    try {
+      const res = await fetch('/api/image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: currentSurfacePrompt }),
+      });
+      const data = await res.json();
+      if (data.data?.[0]?.url) {
+        currentSurfaceImgSrc = data.data[0].url;
+        surfEl.src = currentSurfaceImgSrc;
+        surfEl.onload = () => {
+          sphere.style.display = 'none';
+          surfEl.style.display = 'block';
+          surfEl.onclick = () => openLightbox(currentSurfaceImgSrc, null);
+          document.getElementById('planetLabel').textContent = 'CLICK TO EXPAND';
+        };
+      }
+    } catch(e) {
+      document.getElementById('planetLabel').textContent = 'SURFACE RENDER FAILED';
+      console.warn('Surface image failed:', e);
+      // Revert toggle
+      document.getElementById('btnOrbital').classList.add('active');
+      document.getElementById('btnSurface').classList.remove('active');
+      imgEl.style.display = 'block';
+      sphere.style.display = 'none';
+    }
+  }
+
   function randomName() {
     const pre = ['Kepler','TRAPPIST','Gliese','HD','Wolf','Ross','Proxima','Tau','LHS'];
     const n = Math.floor(Math.random() * 8900) + 100;
@@ -1828,10 +1962,13 @@ OPERATOR-SET PARAMETERS:
 
 Using these facts, generate a scientifically consistent planetary profile. The biosphere, terrain, sky color, and ecology are your creative domain — make them vivid, specific, and consistent with the physics above.
 
+For life potential: if conditions are incompatible with carbon-water life (e.g. methane atmosphere, extreme temps, airless, gas-shrouded) but could support exotic biochemistry (ammonia solvent, methane solvent, sulfuric acid clouds), use "Exotic (non-carbon)" and explain in biochemistryNote. If truly incompatible with any known or theoretical biochemistry, use "None".
+
 Respond ONLY with valid JSON, no markdown, no backticks:
 {
-  "habitabilityScore": <0-100, consistent with the physics>,
-  "lifelyLife": "<None / Microbial / Complex / Intelligent>",
+  "habitabilityScore": <0-100, 0 for airless/gas-shrouded, consistent with physics>,
+  "lifelyLife": "<None / Microbial / Complex / Intelligent / Exotic (non-carbon)>",
+  "biochemistryNote": "<If lifelyLife is Exotic or None, 1 sentence explaining why carbon-water life is impossible and what alternative if any might exist. Empty string otherwise.>",
   "description": "<3-4 sentences. Vivid, specific. Describe sky color, terrain character, dominant weather/phenomena, what a visitor would sense. Reference the physics naturally — e.g. heavy gravity, extreme seasons from tilt, dim red sun. Make it feel real.>",
   "surfaceFeatures": "<1-2 sentences. Specific alien surface details for a visual artist: unusual landmass shapes, dominant terrain type, distinctive color patterns, unique geological formations. Be concrete and visual — e.g. 'A single crescent-shaped supercontinent wraps the northern hemisphere, its interior dominated by vast hexagonal basalt plains split by a glowing rift valley. Deep violet kelp forests coat the shallow equatorial seas.'>"
 }`;
@@ -1873,10 +2010,22 @@ Respond ONLY with valid JSON, no markdown, no backticks:
     document.getElementById('statLife').textContent = planet.lifelyLife || planet.likelyLife || '—';
     document.getElementById('habScore').textContent = score + ' / 100';
 
+    // Show biochemistry note if exotic/none
+    const bioNote = planet.biochemistryNote || '';
+    const analysisPrefix = bioNote ? `[${bioNote}]\n\n` : '';
+
     const sphere = document.getElementById('planetSphere');
     const imgEl = document.getElementById('planetImage');
+    const surfEl = document.getElementById('surfaceImage');
+
+    // Reset view state
     sphere.style.display = 'block';
     imgEl.style.display = 'none';
+    surfEl.style.display = 'none';
+    document.getElementById('viewToggle').style.display = 'none';
+    document.getElementById('btnOrbital').classList.add('active');
+    document.getElementById('btnSurface').classList.remove('active');
+    currentSurfaceImgSrc = null;
     sphere.style.background = visuals.bg;
     sphere.style.boxShadow = `inset -35px -25px 50px rgba(0,0,0,0.7), 0 0 40px ${visuals.glow}`;
 
@@ -1895,7 +2044,7 @@ Respond ONLY with valid JSON, no markdown, no backticks:
       document.getElementById('habFill').style.width = score + '%';
     }, 100);
 
-    typewriter(document.getElementById('analysisBody'), planet.description, 20);
+    typewriter(document.getElementById('analysisBody'), analysisPrefix + planet.description, 20);
 
     // Save to history (image will be updated once loaded)
     const historyEntry = { name, cls: visuals.cls, bg: visuals.bg, glow: visuals.glow, score, imgSrc: null, params, planet, physics };
@@ -1951,8 +2100,10 @@ Respond ONLY with valid JSON, no markdown, no backticks:
             imgEl.style.display = 'block';
             imgEl.onclick = () => openLightbox(imgEl.src, null);
             document.getElementById('planetLabel').textContent = 'CLICK TO EXPAND';
+            document.getElementById('viewToggle').style.display = 'flex';
             currentImgSrc = imgEl.src;
-            // Update history entry with image
+            // Store surface prompt for on-demand generation
+            currentSurfacePrompt = buildSurfacePrompt(planet, visuals, starType, starDesc, physics, atmosphere, tilt, water);
             if (planetHistory[0]) {
               planetHistory[0].imgSrc = imgEl.src;
               renderHistory();
