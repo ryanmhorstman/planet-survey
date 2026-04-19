@@ -1832,7 +1832,8 @@ Respond ONLY with valid JSON, no markdown, no backticks:
 {
   "habitabilityScore": <0-100, consistent with the physics>,
   "lifelyLife": "<None / Microbial / Complex / Intelligent>",
-  "description": "<3-4 sentences. Vivid, specific. Describe sky color, terrain character, dominant weather/phenomena, what a visitor would sense. Reference the physics naturally — e.g. heavy gravity, extreme seasons from tilt, dim red sun. Make it feel real.>"
+  "description": "<3-4 sentences. Vivid, specific. Describe sky color, terrain character, dominant weather/phenomena, what a visitor would sense. Reference the physics naturally — e.g. heavy gravity, extreme seasons from tilt, dim red sun. Make it feel real.>",
+  "surfaceFeatures": "<1-2 sentences. Specific alien surface details for a visual artist: unusual landmass shapes, dominant terrain type, distinctive color patterns, unique geological formations. Be concrete and visual — e.g. 'A single crescent-shaped supercontinent wraps the northern hemisphere, its interior dominated by vast hexagonal basalt plains split by a glowing rift valley. Deep violet kelp forests coat the shallow equatorial seas.'>"
 }`;
 
         const res = await fetch('/api/analyze', {
@@ -1932,7 +1933,9 @@ Respond ONLY with valid JSON, no markdown, no backticks:
 
         const extraContext = [gravDesc, tiltDesc, tempDesc].filter(Boolean).join(', ');
 
-        const imagePrompt = `Photorealistic space photograph of an exoplanet. ${visuals.imgDesc}. ${waterDesc}. ${extraContext ? extraContext + '.' : ''} The planet fills 70% of the frame, centered. A ${starDesc} is visible near the edge of the frame as the light source, casting dramatic one-sided illumination across the planet. Pure black background everywhere else. NO galaxies, NO nebulae, NO dust lanes, NO milky way, NO star fields, NO other objects. NO TEXT, NO LABELS, NO ANNOTATIONS of any kind.`;
+        const surfaceDetail = planet.surfaceFeatures ? planet.surfaceFeatures : '';
+
+        const imagePrompt = `Photorealistic space photograph of an exoplanet. ${visuals.imgDesc}. ${surfaceDetail} ${waterDesc}. ${extraContext ? extraContext + '.' : ''} The planet fills 70% of the frame, centered. A ${starDesc} is visible near the edge of the frame as the light source, casting dramatic one-sided illumination across the planet. Pure black background everywhere else. NO galaxies, NO nebulae, NO dust lanes, NO milky way, NO star fields, NO other objects. NO TEXT, NO LABELS, NO ANNOTATIONS of any kind.`;
 
         const imgRes = await fetch('/api/image', {
           method: 'POST',
