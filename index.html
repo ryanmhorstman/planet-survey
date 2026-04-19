@@ -1025,6 +1025,98 @@
 
   /* Water disabled state */
   .slider-disabled { opacity: 0.35; pointer-events: none; }
+  /* ── BROWSE MODAL ── */
+  .browse-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(26,22,18,0.92);
+    z-index: 250;
+    align-items: center;
+    justify-content: center;
+  }
+  .browse-modal.open { display: flex; }
+  .browse-inner {
+    background: var(--surface);
+    border: 1px solid var(--gold-rule);
+    width: min(680px, 95vw);
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .browse-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--gold-rule);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .browse-title { font-size: 10px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; }
+  .browse-close { font-size: 10px; letter-spacing: 2px; color: var(--ink-dim); cursor: pointer; font-family: 'Space Mono', monospace; }
+  .browse-close:hover { color: var(--gold-bright); }
+  .browse-search-row {
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--gold-rule);
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .browse-search {
+    flex: 1;
+    background: var(--paper);
+    border: 1px solid var(--gold-rule);
+    color: var(--ink);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    padding: 8px 12px;
+    outline: none;
+  }
+  .browse-search:focus { border-color: var(--gold-bright); }
+  .browse-search::placeholder { color: var(--ink-dim); }
+  .browse-search-btn {
+    background: var(--ink);
+    border: none;
+    color: var(--gold-light);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    padding: 8px 16px;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  .browse-search-btn:hover { background: var(--ink-mid); }
+  .browse-filter-row {
+    padding: 10px 24px;
+    border-bottom: 1px solid var(--gold-rule);
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  .browse-filter {
+    font-size: 9px; letter-spacing: 2px; color: var(--ink-dim); text-transform: uppercase;
+    padding: 4px 10px; border: 1px solid var(--gold-rule); cursor: pointer;
+    background: transparent; font-family: 'Space Mono', monospace; transition: all 0.15s;
+  }
+  .browse-filter:hover, .browse-filter.active { border-color: var(--gold-bright); color: var(--gold-bright); background: var(--gold-bg); }
+  .browse-list { overflow-y: auto; flex: 1; }
+  .browse-item {
+    padding: 14px 24px;
+    border-bottom: 1px solid rgba(138,108,32,0.1);
+    cursor: pointer;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+    transition: background 0.15s;
+  }
+  .browse-item:hover { background: var(--gold-bg); }
+  .browse-item-name { font-family: 'EB Garamond', serif; font-size: 18px; color: var(--ink); }
+  .browse-item-meta { font-size: 10px; color: var(--ink-soft); letter-spacing: 1px; margin-top: 3px; }
+  .browse-item-hab { font-size: 10px; letter-spacing: 2px; color: var(--gold); text-align: right; }
+  .browse-status { padding: 24px; text-align: center; font-size: 11px; letter-spacing: 2px; color: var(--ink-dim); text-transform: uppercase; }
 </style>
 </head>
 <body>
@@ -1177,6 +1269,7 @@
     </div>
 
     <button class="randomize-btn" onclick="randomizeParams()">⚄ Randomize Parameters</button>
+    <button class="randomize-btn" onclick="openBrowse()" style="border-top:none">◉ Browse Confirmed Worlds</button>
 
     <button class="generate-btn" id="generateBtn" onclick="generatePlanet()">
       <span class="btn-sym">◈</span>
@@ -1452,7 +1545,7 @@
   }
 
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeLightbox();
+    if (e.key === 'Escape') { closeLightbox(); closeBrowse(); }
   });
 
   // Load shared planet from URL hash on page load
@@ -1852,6 +1945,165 @@
     }
   }
 
+  // ── BROWSE CONFIRMED WORLDS ──
+  let browseFilter = 'all';
+  let browseResults = [];
+
+  function openBrowse() {
+    document.getElementById('browseModal').classList.add('open');
+    if (browseResults.length === 0) loadDefaultExoplanets();
+  }
+
+  function closeBrowse() {
+    document.getElementById('browseModal').classList.remove('open');
+  }
+
+  function setFilter(filter, btn) {
+    browseFilter = filter;
+    document.querySelectorAll('.browse-filter').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('browseSearch').value = '';
+    loadDefaultExoplanets();
+  }
+
+  async function loadDefaultExoplanets() {
+    const status = document.getElementById('browseStatus');
+    const list = document.getElementById('browseList');
+    list.innerHTML = '<div class="browse-status">Querying NASA Exoplanet Archive...</div>';
+
+    const filterQueries = {
+      all: `select+top+50+pl_name,hostname,pl_rade,pl_bmasse,pl_eqt,pl_orbper,st_spectype,pl_orbsmax+from+ps+where+pl_rade+is+not+null+and+pl_bmasse+is+not+null+order+by+pl_rade+asc`,
+      habitable: `select+top+50+pl_name,hostname,pl_rade,pl_bmasse,pl_eqt,pl_orbper,st_spectype,pl_orbsmax+from+ps+where+pl_eqt+between+200+and+320+and+pl_rade+between+0.5+and+2.5+and+pl_rade+is+not+null+order+by+pl_eqt+asc`,
+      earthlike: `select+top+50+pl_name,hostname,pl_rade,pl_bmasse,pl_eqt,pl_orbper,st_spectype,pl_orbsmax+from+ps+where+pl_rade+between+0.8+and+1.5+and+pl_bmasse+between+0.5+and+3+and+pl_rade+is+not+null+order+by+pl_rade+asc`,
+      superearth: `select+top+50+pl_name,hostname,pl_rade,pl_bmasse,pl_eqt,pl_orbper,st_spectype,pl_orbsmax+from+ps+where+pl_rade+between+1.5+and+4+and+pl_bmasse+is+not+null+order+by+pl_rade+asc`,
+      trappist: `select+pl_name,hostname,pl_rade,pl_bmasse,pl_eqt,pl_orbper,st_spectype,pl_orbsmax+from+ps+where+hostname+like+'TRAPPIST-1'+and+pl_rade+is+not+null+order+by+pl_orbper+asc`,
+    };
+
+    const query = filterQueries[browseFilter] || filterQueries.all;
+    await fetchAndRender(query);
+  }
+
+  async function searchExoplanets() {
+    const term = document.getElementById('browseSearch').value.trim();
+    if (!term) return loadDefaultExoplanets();
+
+    document.getElementById('browseList').innerHTML = '<div class="browse-status">Querying NASA Exoplanet Archive...</div>';
+
+    const query = `select+top+50+pl_name,hostname,pl_rade,pl_bmasse,pl_eqt,pl_orbper,st_spectype,pl_orbsmax+from+ps+where+pl_name+like+'%25${encodeURIComponent(term)}%25'+and+pl_rade+is+not+null+order+by+pl_rade+asc`;
+    await fetchAndRender(query);
+  }
+
+  async function fetchAndRender(query) {
+    const url = `https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=${query}&format=json`;
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      browseResults = data;
+      renderBrowseResults(data);
+    } catch(e) {
+      document.getElementById('browseList').innerHTML = '<div class="browse-status">Failed to reach NASA archive — check connection</div>';
+    }
+  }
+
+  function renderBrowseResults(planets) {
+    const list = document.getElementById('browseList');
+    if (!planets.length) {
+      list.innerHTML = '<div class="browse-status">No results found</div>';
+      return;
+    }
+
+    // Deduplicate by planet name
+    const seen = new Set();
+    const unique = planets.filter(p => {
+      if (seen.has(p.pl_name)) return false;
+      seen.add(p.pl_name);
+      return true;
+    });
+
+    list.innerHTML = unique.map(p => {
+      const radius = p.pl_rade ? `${parseFloat(p.pl_rade).toFixed(2)}× Earth` : '—';
+      const mass = p.pl_bmasse ? `${parseFloat(p.pl_bmasse).toFixed(2)}× Earth` : '—';
+      const temp = p.pl_eqt ? `${Math.round(p.pl_eqt - 273.15)}°C eq.` : 'temp unknown';
+      const star = p.st_spectype ? p.st_spectype.charAt(0) + '-type' : 'unknown star';
+      const period = p.pl_orbper ? `${parseFloat(p.pl_orbper).toFixed(1)}d orbit` : '';
+
+      // Rough habitability flag
+      const eqtK = p.pl_eqt || 0;
+      const isHZ = eqtK > 200 && eqtK < 320 && p.pl_rade < 2.5;
+      const habLabel = isHZ ? '◈ HZ' : '';
+
+      return `<div class="browse-item" onclick="loadExoplanet(${unique.indexOf(p)})">
+        <div>
+          <div class="browse-item-name">${p.pl_name}</div>
+          <div class="browse-item-meta">${star} · ${radius} · ${mass} · ${temp}${period ? ' · ' + period : ''}</div>
+        </div>
+        <div class="browse-item-hab">${habLabel}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function loadExoplanet(idx) {
+    const p = browseResults.filter((pl, i, arr) => {
+      const seen = new Set();
+      return arr.findIndex(x => x.pl_name === pl.pl_name) === arr.indexOf(pl);
+    })[idx];
+
+    if (!p) return;
+
+    // Map NASA data to our params
+    // Star type
+    const specType = (p.st_spectype || 'G').charAt(0).toUpperCase();
+    const starMap = { 'G': 'G-type (Sun-like)', 'K': 'K-type (orange dwarf)', 'M': 'M-type (red dwarf)', 'F': 'F-type (yellow-white)', 'A': 'F-type (yellow-white)', 'B': 'F-type (yellow-white)' };
+    document.getElementById('starType').value = starMap[specType] || 'G-type (Sun-like)';
+
+    // Radius (our slider: 5-25, value/10 = earth radii)
+    const radiusEarth = p.pl_rade ? Math.min(2.5, Math.max(0.5, parseFloat(p.pl_rade))) : 1.0;
+    const radiusSlider = Math.round(radiusEarth * 10);
+    document.getElementById('planetRadius').value = Math.min(25, Math.max(5, radiusSlider));
+    document.getElementById('radiusVal').textContent = radiusEarth.toFixed(1) + '× Earth';
+
+    // Mass (our slider: 1-30, value/10 = earth masses)
+    const massEarth = p.pl_bmasse ? Math.min(3.0, Math.max(0.1, parseFloat(p.pl_bmasse))) : 1.0;
+    const massSlider = Math.round(massEarth * 10);
+    document.getElementById('planetMass').value = Math.min(30, Math.max(1, massSlider));
+    document.getElementById('massVal').textContent = massEarth.toFixed(1) + '× Earth';
+
+    // Orbital zone from equilibrium temp
+    const eqtK = p.pl_eqt || 255;
+    let zone = 'middle habitable zone';
+    if (eqtK > 350) zone = 'inner edge (very hot)';
+    else if (eqtK > 280) zone = 'inner habitable zone';
+    else if (eqtK > 220) zone = 'middle habitable zone';
+    else if (eqtK > 180) zone = 'outer habitable zone';
+    else zone = 'outer edge (very cold)';
+    document.getElementById('orbitalZone').value = zone;
+
+    // Atmosphere — infer from radius (rocky vs mini-neptune)
+    let atmo = 'nitrogen-oxygen (Earth-like)';
+    if (radiusEarth > 2.0) atmo = 'hydrogen-helium envelope';
+    else if (radiusEarth > 1.6) atmo = 'thick CO2 (Venus-like)';
+    else if (eqtK < 180) atmo = 'thin nitrogen';
+    document.getElementById('atmosphere').value = atmo;
+    handleAtmosphereChange(atmo);
+
+    // Water — rough guess from temp and radius
+    let water = 50;
+    if (eqtK < 200) water = 10;
+    else if (eqtK > 340) water = 5;
+    else if (radiusEarth < 1.2 && eqtK > 220 && eqtK < 310) water = 65;
+    document.getElementById('waterCoverage').value = water;
+    document.getElementById('waterVal').textContent = water + '%';
+
+    // Axial tilt — unknown for exoplanets, use Earth-like default
+    document.getElementById('axialTilt').value = 23;
+    document.getElementById('tiltVal').textContent = '23°';
+
+    // Update subtitle to show this is a real planet
+    document.querySelector('.unit-subtitle').textContent = `// Real world loaded: ${p.pl_name} (NASA Archive)`;
+
+    closeBrowse();
+  }
+
   function randomName() {
     const pre = ['Kepler','TRAPPIST','Gliese','HD','Wolf','Ross','Proxima','Tau','LHS'];
     const n = Math.floor(Math.random() * 8900) + 100;
@@ -2121,6 +2373,31 @@ Respond ONLY with valid JSON, no markdown, no backticks:
     btn.disabled = false;
   }
 </script>
+  <!-- Browse Confirmed Worlds Modal -->
+  <div class="browse-modal" id="browseModal">
+    <div class="browse-inner">
+      <div class="browse-header">
+        <div class="browse-title">◉ NASA Exoplanet Archive // Confirmed Worlds</div>
+        <div class="browse-close" onclick="closeBrowse()">✕ CLOSE</div>
+      </div>
+      <div class="browse-search-row">
+        <input class="browse-search" id="browseSearch" placeholder="Search by name — e.g. TRAPPIST, Kepler, Proxima..."
+          onkeydown="if(event.key==='Enter') searchExoplanets()">
+        <button class="browse-search-btn" onclick="searchExoplanets()">Search</button>
+      </div>
+      <div class="browse-filter-row">
+        <button class="browse-filter active" onclick="setFilter('all', this)">All</button>
+        <button class="browse-filter" onclick="setFilter('habitable', this)">Habitable Zone</button>
+        <button class="browse-filter" onclick="setFilter('earthlike', this)">Earth-like</button>
+        <button class="browse-filter" onclick="setFilter('superearth', this)">Super-Earths</button>
+        <button class="browse-filter" onclick="setFilter('trappist', this)">TRAPPIST-1</button>
+      </div>
+      <div class="browse-list" id="browseList">
+        <div class="browse-status" id="browseStatus">Enter a search term or select a filter above</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Lightbox -->
   <div class="lightbox" id="lightbox" onclick="closeLightbox()">
     <div class="lightbox-close">ESC / CLICK TO CLOSE</div>
