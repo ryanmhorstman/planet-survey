@@ -754,6 +754,138 @@
   }
   .randomize-btn:hover { color: var(--gold-bright); background: var(--gold-bg); }
 
+  /* ── ACCESS GATE ── */
+  .gate {
+    position: fixed;
+    inset: 0;
+    background: var(--ink);
+    z-index: 300;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .gate.hidden { display: none; }
+
+  .gate-corner {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-color: var(--gold);
+    border-style: solid;
+  }
+  .gate-corner.tl { top: 24px; left: 24px; border-width: 1px 0 0 1px; }
+  .gate-corner.tr { top: 24px; right: 24px; border-width: 1px 1px 0 0; }
+  .gate-corner.bl { bottom: 24px; left: 24px; border-width: 0 0 1px 1px; }
+  .gate-corner.br { bottom: 24px; right: 24px; border-width: 0 1px 1px 0; }
+
+  .gate-unit {
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 48px;
+  }
+
+  .gate-title {
+    font-family: 'EB Garamond', serif;
+    font-size: 52px;
+    font-weight: 400;
+    color: var(--parchment);
+    line-height: 1;
+    margin-bottom: 6px;
+    text-align: center;
+  }
+
+  .gate-title em {
+    font-style: italic;
+    color: var(--gold-bright);
+  }
+
+  .gate-sub {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    margin-bottom: 56px;
+  }
+
+  .gate-prompt {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .gate-input-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border: 1px solid var(--gold-rule);
+  }
+
+  .gate-input {
+    background: transparent;
+    border: none;
+    color: var(--gold-light);
+    font-family: 'Space Mono', monospace;
+    font-size: 18px;
+    letter-spacing: 6px;
+    padding: 14px 20px;
+    width: 200px;
+    text-align: center;
+    outline: none;
+    text-transform: uppercase;
+  }
+
+  .gate-input::placeholder { color: var(--ink-soft); letter-spacing: 4px; font-size: 13px; }
+
+  .gate-submit {
+    background: var(--gold);
+    border: none;
+    color: var(--ink);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    padding: 14px 18px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background 0.2s;
+  }
+  .gate-submit:hover { background: var(--gold-bright); }
+
+  .gate-status {
+    margin-top: 20px;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: transparent;
+    height: 20px;
+    transition: color 0.2s;
+  }
+
+  .gate-status.denied { color: #c04030; animation: gate-shake 0.4s ease; }
+  .gate-status.granted { color: var(--gold-bright); }
+
+  @keyframes gate-shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-6px); }
+    80% { transform: translateX(6px); }
+  }
+
+  .gate-cycles {
+    position: absolute;
+    bottom: 32px;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--ink-soft);
+  }
+
   /* ── HISTORY STRIP ── */
   .history-strip {
     display: none;
@@ -866,6 +998,27 @@
 </style>
 </head>
 <body>
+
+<div class="gate" id="accessGate">
+  <div class="gate-corner tl"></div>
+  <div class="gate-corner tr"></div>
+  <div class="gate-corner bl"></div>
+  <div class="gate-corner br"></div>
+
+  <div class="gate-unit">PSU-7 // Planetary Survey Unit</div>
+  <div class="gate-title">Operator<br><em>Clearance</em> Required</div>
+  <div class="gate-sub">// Restricted Access — Authorized Personnel Only</div>
+
+  <div class="gate-prompt">Enter Access Code</div>
+  <div class="gate-input-row">
+    <input class="gate-input" id="gateInput" type="text" placeholder="_ _ _" maxlength="10"
+      onkeydown="if(event.key==='Enter') attemptAccess()">
+    <button class="gate-submit" onclick="attemptAccess()">▶</button>
+  </div>
+  <div class="gate-status" id="gateStatus">—</div>
+
+  <div class="gate-cycles">CYCLE 4,847,291 // 12,000 WORLDS REMAINING</div>
+</div>
 
 <div class="topbar">
   <span class="topbar-id">PSU-7 // PLANETARY SURVEY UNIT</span>
@@ -1104,6 +1257,38 @@
 </div>
 
 <script>
+  // ── ACCESS GATE ──
+  const ACCESS_CODE = 'p53';
+
+  function attemptAccess() {
+    const input = document.getElementById('gateInput').value.trim().toLowerCase();
+    const status = document.getElementById('gateStatus');
+
+    if (input === ACCESS_CODE) {
+      status.textContent = '✓ ACCESS GRANTED — WELCOME, OPERATOR';
+      status.className = 'gate-status granted';
+      sessionStorage.setItem('psu7_access', '1');
+      setTimeout(() => {
+        document.getElementById('accessGate').classList.add('hidden');
+      }, 900);
+    } else {
+      status.textContent = '✗ ACCESS DENIED — INVALID OPERATOR CODE';
+      status.className = 'gate-status denied';
+      document.getElementById('gateInput').value = '';
+      // Re-trigger animation on repeat attempts
+      void status.offsetWidth;
+      setTimeout(() => {
+        status.className = 'gate-status';
+        status.textContent = '—';
+      }, 2500);
+    }
+  }
+
+  // Check session on load
+  if (sessionStorage.getItem('psu7_access') === '1') {
+    document.getElementById('accessGate').classList.add('hidden');
+  }
+
   const LOADING_MESSAGES = [
     'Initializing optical array...',
     'Calculating orbital mechanics...',
