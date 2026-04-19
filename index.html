@@ -1942,6 +1942,8 @@
       surface: `${floraHeight.charAt(0).toUpperCase() + floraHeight.slice(1)} of ${colors} cover much of the terrain. ${sciNote}. Alien flora dominates the landscape.`
     };
   }
+
+  async function switchView(mode) {
     document.getElementById('btnOrbital').classList.toggle('active', mode === 'orbital');
     document.getElementById('btnSurface').classList.toggle('active', mode === 'surface');
 
