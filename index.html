@@ -1951,6 +1951,9 @@ CALCULATED PHYSICS (do not contradict these):
 - Mean surface temperature: ~${physics.surfTempC}°C
 - Atmosphere retained: ${physics.atmoRetained}
 
+ATMOSPHERE CONSTRAINTS (apply strictly):
+${atmosphere.includes('nitrogen-oxygen') ? '- N₂/O₂ atmosphere: full UV protection via ozone, breathable pressure, strong greenhouse ~33K, liquid water broadly stable if temps allow.' : ''}${atmosphere.includes('thin nitrogen') ? '- Thin N₂ atmosphere: very low pressure (~0.1-0.3 bar), NO ozone layer so intense UV radiation sterilizes surface, minimal greenhouse effect, liquid water only in deep sheltered areas or subsurface, surface conditions hostile to complex life, habitability score should be LOW (max 35).' : ''}${atmosphere.includes('CO2') ? '- Dense CO₂ atmosphere: extreme greenhouse effect, surface likely 400°C+, sulfuric acid clouds possible, uninhabitable for carbon-water life, score 0-10 unless very cold orbital position.' : ''}${atmosphere.includes('methane') ? '- Methane-rich atmosphere: incompatible with carbon-water life, cold temperatures imply methane/ammonia solvent biochemistry only (Titan-like), surface liquid water impossible, exotic life only.' : ''}${atmosphere.includes('hydrogen') ? '- Hydrogen-helium envelope: no solid surface, no solvent chemistry possible, life of any type implausible, score 0.' : ''}${atmosphere.includes('none') ? '- No atmosphere: no UV protection, no pressure, no liquid water possible, temperature extremes from -270°C to +130°C, life impossible, score 0.' : ''}
+
 OPERATOR-SET PARAMETERS:
 - Star type: ${starType}
 - Orbital zone: ${orbital}
