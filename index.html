@@ -2265,7 +2265,7 @@ Respond ONLY with valid JSON, no markdown, no backticks:
         const surfaceDetail = planet.surfaceFeatures ? planet.surfaceFeatures : '';
         const vegDesc = getVegetationDesc(starType, planet.lifelyLife, physics.gravityG, atmosphere);
 
-        const imagePrompt = `Photorealistic space photograph of an exoplanet. ${visuals.imgDesc}. ${surfaceDetail} ${waterDesc}. ${vegDesc.orbital ? vegDesc.orbital : ''} ${extraContext ? extraContext + '.' : ''} Continent shapes bear NO resemblance to Earth — purely alien, unrecognizable landmass outlines. The planet fills 70% of the frame, centered. A ${starDesc} is visible near the edge of the frame as the light source, casting dramatic one-sided illumination across the planet. Pure black background everywhere else. NO galaxies, NO nebulae, NO dust lanes, NO milky way, NO star fields, NO other objects. NO TEXT, NO LABELS, NO ANNOTATIONS of any kind.`;
+        const imagePrompt = `Photorealistic space photograph of an exoplanet seen from space. ${visuals.imgDesc}. ${surfaceDetail} ${waterDesc}. ${vegDesc.orbital ? vegDesc.orbital : ''} ${extraContext ? extraContext + '.' : ''} Continent shapes bear NO resemblance to Earth — purely alien, unrecognizable landmass outlines. The planet fills 70% of the frame, centered. A ${starDesc} is visible near the edge of the frame as the light source, casting dramatic one-sided illumination across the planet. Pure black background everywhere else. NO galaxies, NO nebulae, NO dust lanes, NO milky way, NO star fields, NO moons, NO other planets, NO other objects in background. NO ground-level terrain visible — this is a photograph from space. NO TEXT, NO LABELS, NO ANNOTATIONS of any kind.`;
 
         const imgRes = await fetch('/api/image', {
           method: 'POST',
@@ -2277,8 +2277,12 @@ Respond ONLY with valid JSON, no markdown, no backticks:
         if (imgData.data && imgData.data[0] && imgData.data[0].url) {
           imgEl.src = imgData.data[0].url;
           imgEl.onload = () => {
-            sphere.style.display = 'none';
-            imgEl.style.display = 'block';
+            // Only show if orbital view is still active (race condition guard)
+            const orbitalActive = document.getElementById('btnOrbital').classList.contains('active');
+            if (orbitalActive) {
+              sphere.style.display = 'none';
+              imgEl.style.display = 'block';
+            }
             imgEl.onclick = () => openLightbox(imgEl.src, null);
             document.getElementById('planetLabel').textContent = 'CLICK TO EXPAND';
             document.getElementById('viewToggle').style.display = 'flex';
