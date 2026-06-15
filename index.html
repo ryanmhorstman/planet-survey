@@ -945,9 +945,8 @@
     transition: opacity 0.4s ease;
     flex-shrink: 0;
   }
-  .render-nudge.visible {
-    opacity: 1;
-  }
+  .render-nudge.loading { color: var(--ink-dim); cursor: default; }
+  .render-nudge.visible { opacity: 1; }
   @media (max-width: 800px) {
     .render-nudge { display: block; }
   }
@@ -2092,7 +2091,7 @@
   }
 
   let typewriterTimeout = null;
-  function typewriter(element, text, speed = 20) {
+  function typewriter(element, text, speed = 20, onComplete) {
     if (typewriterTimeout) clearTimeout(typewriterTimeout);
     element.innerHTML = '';
     let i = 0;
@@ -2103,9 +2102,14 @@
       if (i < text.length) {
         cursor.insertAdjacentText('beforebegin', text[i]);
         i++;
+        // Scroll cursor into view on mobile so text is always visible
+        if (window.innerWidth <= 800) {
+          cursor.scrollIntoView({ block: 'nearest' });
+        }
         typewriterTimeout = setTimeout(type, speed);
       } else {
         cursor.remove();
+        if (onComplete) onComplete();
       }
     }
     type();
@@ -2284,14 +2288,40 @@ Respond ONLY with valid JSON, no markdown, no backticks:
       document.getElementById('habFill').style.width = score + '%';
     }, 100);
 
-    typewriter(document.getElementById('analysisBody'), analysisPrefix + planet.description, 20);
+    // Hide nudge until typewriter finishes
+    const nudge = document.getElementById('renderNudge');
+    nudge.classList.remove('visible');
+    nudge.classList.add('loading');
 
-    // On mobile, scroll to analysis so typewriter is immediately visible
-    if (window.innerWidth <= 800) {
-      setTimeout(() => {
-        document.getElementById('analysisBody').closest('.analysis-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 80);
+    let imageReady = false;
+    let typewriterDone = false;
+
+    function tryShowNudge() {
+      if (!typewriterDone) return;
+      nudge.classList.remove('loading');
+      if (window.innerWidth <= 800) {
+        if (imageReady) {
+          nudge.textContent = '↑ Orbital render complete — tap to view';
+        } else {
+          nudge.textContent = '⟳ Rendering orbital composite...';
+        }
+        nudge.classList.add('visible');
+      }
     }
+
+    window._onImageReady = () => {
+      imageReady = true;
+      if (window.innerWidth <= 800 && nudge.classList.contains('visible')) {
+        nudge.textContent = '↑ Orbital render complete — tap to view';
+      } else {
+        tryShowNudge();
+      }
+    };
+
+    typewriter(document.getElementById('analysisBody'), analysisPrefix + planet.description, 20, () => {
+      typewriterDone = true;
+      tryShowNudge();
+    });
 
     // Save to history (image will be updated once loaded)
     const historyEntry = { name, cls: visuals.cls, bg: visuals.bg, glow: visuals.glow, score, imgSrc: null, params, planet, physics };
@@ -2354,13 +2384,7 @@ Respond ONLY with valid JSON, no markdown, no backticks:
             document.getElementById('planetLabel').textContent = 'CLICK TO EXPAND';
             document.getElementById('viewToggle').style.display = 'flex';
             currentImgSrc = imgEl.src;
-
-            // On mobile, show nudge banner pointing up to the render
-            if (window.innerWidth <= 800) {
-              const nudge = document.getElementById('renderNudge');
-              nudge.classList.add('visible');
-              setTimeout(() => nudge.classList.remove('visible'), 5000);
-            }
+            if (window._onImageReady) window._onImageReady();
             // Store surface prompt for on-demand generation
             currentSurfacePrompt = buildSurfacePrompt(planet, visuals, starType, starDesc, physics, atmosphere, tilt, water);
             if (planetHistory[0]) {
