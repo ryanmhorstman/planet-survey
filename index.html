@@ -121,8 +121,9 @@
     .params { padding: 16px 20px; }
     .api-section { padding: 14px 20px; }
 
-    .stats-row { grid-template-columns: repeat(2, 1fr); }
-    .stat:nth-child(2n) { border-right: none; }
+    .stats-row { grid-template-columns: repeat(2, 1fr) !important; }
+    .stat:nth-child(2n) { border-right: none !important; }
+    .stat:nth-child(odd) { border-right: 1px solid var(--gold-rule); }
     .stat-value { font-size: 11px; }
 
     .hab-section { padding: 14px 16px; }
