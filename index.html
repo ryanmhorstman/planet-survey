@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PSU-7 // Planetary Survey Unit</title>
+<meta name="description" content="An exoplanet habitability generator. Set the parameters, initiate a survey, and receive a full scientific analysis of your world — rendered in real time with AI.">
+<meta property="og:title" content="PSU-7 // Planetary Survey Unit">
+<meta property="og:description" content="An exoplanet habitability generator. Set the parameters, initiate a survey, and receive a full scientific analysis of your world — rendered in real time with AI.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="PSU-7 // Planetary Survey Unit">
+<meta name="twitter:description" content="An exoplanet habitability generator. Set the parameters, initiate a survey, and receive a full scientific analysis of your world — rendered in real time with AI.">
+<meta name="twitter:image" content="/og-image.png">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Space+Mono:wght@400;700&display=swap');
 
@@ -2101,16 +2110,7 @@
     let planet;
     const params = { starType, orbital, atmosphere, water, massEarth, radiusEarth, tilt };
 
-    if (false) {
-      // mock mode — unreachable in production
-      await new Promise(r => setTimeout(r, 3000));
-      planet = {
-        habitabilityScore: 73,
-        lifelyLife: 'Complex',
-        description: 'This world presents as a vast shallow ocean broken by archipelagic chains of volcanic origin. The sky carries a deep periwinkle hue at zenith, fading to amber near the horizon. Surface conditions favor complex multicellular life — tidal patterns driven by two small captured moons drive nutrient cycling across continental shelves of exceptional biological richness.'
-      };
-    } else {
-      try {
+    try {
         const prompt = `You are a planetary scientist. The following exoplanet parameters have been CALCULATED from physical first principles — treat all numeric values as authoritative facts, not estimates.
 
 CALCULATED PHYSICS (do not contradict these):
@@ -2153,6 +2153,15 @@ Respond ONLY with valid JSON, no markdown, no backticks:
           body: JSON.stringify({ prompt }),
         });
 
+        if (res.status === 429) {
+          clearInterval(loadingInterval);
+          document.getElementById('loadingState').classList.remove('visible');
+          document.getElementById('idleState').style.display = '';
+          document.getElementById('idleState').querySelector('.idle-text').textContent = 'Survey limit reached — please wait before initiating another scan.';
+          btn.disabled = false;
+          return;
+        }
+
         const data = await res.json();
         const raw = data.content.map(i => i.text || '').join('').replace(/```json|```/g,'').trim();
         planet = JSON.parse(raw);
@@ -2160,11 +2169,10 @@ Respond ONLY with valid JSON, no markdown, no backticks:
         clearInterval(loadingInterval);
         document.getElementById('loadingState').classList.remove('visible');
         document.getElementById('idleState').style.display = '';
-        document.getElementById('idleState').querySelector('.idle-text').textContent = 'Signal lost. Check API key and try again.';
+        document.getElementById('idleState').querySelector('.idle-text').textContent = 'Signal lost. Please retry.';
         btn.disabled = false;
         return;
       }
-    }
 
     clearInterval(loadingInterval);
 
