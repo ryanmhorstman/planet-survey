@@ -139,12 +139,12 @@
     .footer { flex-direction: column; gap: 4px; align-items: center; text-align: center; }
     .footer .footer-gold { display: none; }
 
-    /* Reorder result panel on mobile: analysis first, planet view below */
+    /* Reorder result panel on mobile: analysis → planet → scores → stats → actions */
     .result-state { flex-direction: column; }
     .analysis-section { order: 1; }
-    .hab-section    { order: 2; }
-    .stats-row      { order: 3; }
-    .planet-view    { order: 4; border-top: 2px solid var(--gold); border-bottom: none; }
+    .planet-view    { order: 2; border-top: 2px solid var(--gold); border-bottom: none; max-height: 260px; }
+    .hab-section    { order: 3; }
+    .stats-row      { order: 4; }
     .action-bar     { order: 5; }
   }
 
