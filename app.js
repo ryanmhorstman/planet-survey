@@ -1,4 +1,4 @@
-import { DEFAULTS, STARS, ZONES, ATMOSPHERES, createReport, sampleReport, paramsFromCatalog, validateParams, validateNarrative, visualSpec } from './lib/planet.js';
+import { DEFAULTS, STARS, ZONES, ATMOSPHERES, createReport, sampleReport, paramsFromCatalog, validateParams, validateNarrative, visualSpec, calculate, biosphereSpec } from './lib/planet.js';
 import { restoreReport, serializeReport, restoreLegacy, safeAsset } from './lib/client-report.js';
 
 const $ = id => document.getElementById(id);
@@ -6,7 +6,7 @@ const state = { reports: [], activeId: null, view: 'orbital', catalog: null, tas
   capabilities: { analysis: false, images: false, sharing: false }, capabilityStatus: 'loading', browseFilter: 'all', browseController: null };
 const active = () => state.reports.find(r => r.id === state.activeId);
 const STORE = 'psu7-reports-v2';
-const fields = { starType: 'starType', orbital: 'orbitalZone', atmosphere: 'atmosphere', water: 'waterCoverage', massEarth: 'planetMass', radiusEarth: 'planetRadius', tilt: 'axialTilt', rotationHours: 'rotationHours', pressureBar: 'pressureBar' };
+const fields = { starType: 'starType', orbital: 'orbitalZone', atmosphere: 'atmosphere', water: 'waterCoverage', massEarth: 'planetMass', radiusEarth: 'planetRadius', tilt: 'axialTilt', rotationHours: 'rotationHours', pressureBar: 'pressureBar', biosphere: 'imaginedBiosphere' };
 const format = (n, digits = 2) => new Intl.NumberFormat('en', { maximumFractionDigits: digits }).format(n);
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 function announce(message) { $('announcer').textContent = message; }
@@ -42,6 +42,12 @@ function updateValues() {
     $(output).textContent = value + suffix;
     $(input).setAttribute('aria-valuetext', value + (suffix === '%' ? ' percent' : suffix === '°' ? ' degrees' : ' times Earth'));
   }
+  try {
+    const p = readControls(), biology = biosphereSpec(p, calculate(p, state.catalog));
+    $('biosphereHelp').textContent = biology.present
+      ? `Invented biology, not a life prediction. ${biology.palette}; ${biology.forms}.`
+      : biology.reason;
+  } catch { $('biosphereHelp').textContent = 'An artistic choice, not a life prediction. Complete the scenario parameters to preview its treatment.'; }
 }
 function setControls(params, catalog = null) {
   state.catalog = catalog;
@@ -77,7 +83,7 @@ function syncAtmosphere(resetPressure) {
 }
 function readControls() {
   return validateParams(Object.fromEntries(Object.entries(fields).map(([key, id]) =>
-    [key, ['starType', 'orbital', 'atmosphere'].includes(key) ? $(id).value : Number($(id).value)])));
+    [key, ['starType', 'orbital', 'atmosphere', 'biosphere'].includes(key) ? $(id).value : Number($(id).value)])));
 }
 async function request(url, options = {}, timeout = 30000) {
   const controller = new AbortController(), timer = setTimeout(() => controller.abort(), timeout);
@@ -140,6 +146,8 @@ function render() {
   addFact('Stellar assumptions', `${format(f.star.mass, 3)} solar masses (${r.catalog?.st_mass != null ? 'catalogued' : 'class estimate'}); ${format(f.star.luminosity, 5)} solar luminosities (${r.catalog?.st_lum != null ? 'catalogued' : 'class estimate'})`);
   addFact('Temperature', `${f.temperatureSource}. Greenhouse offset: ${format(f.greenhouseK)} K. Weather and regional extremes are not resolved.`);
   addFact('Environment assumptions', `${p.atmosphere}; ${format(p.pressureBar)} bar; ${p.water}% water/ice inventory; ${p.tilt}° tilt`);
+  const biology = biosphereSpec(p, f);
+  addFact('Imagined biosphere', `${p.biosphere.charAt(0).toUpperCase() + p.biosphere.slice(1)} mode. ${biology.present ? `${biology.palette}; ${biology.forms}. Artistic choices, not detected life.` : biology.reason}`);
   addFact('Rotation assumption', `${format(p.rotationHours, 2)} Earth hours per rotation. ${f.solarDaysPerYear == null ? 'No solar day cycle in the synchronous case.' : `${format(f.solarDaysPerYear, 1)} modeled solar days per orbit.`}`);
   $('modelWarnings').replaceChildren(...f.warnings.map(w => { const li = document.createElement('li'); li.textContent = w; return li; }));
   for (const view of ['orbital', 'surface']) { const button = $(view === 'orbital' ? 'btnOrbital' : 'btnSurface'); button.classList.toggle('active', state.view === view); button.setAttribute('aria-pressed', String(state.view === view)); }
@@ -277,7 +285,7 @@ async function browse() {
       const name = document.createElement('span'); name.className = 'browse-item-name'; name.textContent = catalog.pl_name;
       const meta = document.createElement('span'); meta.className = 'browse-item-meta';
       meta.textContent = `${catalog.pl_rade == null ? 'Radius unknown' : format(catalog.pl_rade, 3) + ' Earth radii'} · ${catalog.pl_bmasse == null ? 'Mass unknown' : format(catalog.pl_bmasse, 3) + ' Earth masses'} · ${catalog.pl_orbper == null ? 'Period unknown' : format(catalog.pl_orbper, 2) + ' Earth days'}`;
-      button.append(name, meta); button.addEventListener('click', () => { try { setControls(paramsFromCatalog(catalog), catalog); $('browseModal').close(); void generate(); } catch (error) { $('browseStatus').textContent = error.message; } });
+      button.append(name, meta); button.addEventListener('click', () => { try { setControls({ ...paramsFromCatalog(catalog), biosphere: $('imaginedBiosphere').value }, catalog); $('browseModal').close(); void generate(); } catch (error) { $('browseStatus').textContent = error.message; } });
       $('browseList').append(button);
     }
   } catch (error) { if (state.browseController === controller) { $('browseStatus').textContent = error.message; $('browseRetry').hidden = false; } }
@@ -323,7 +331,7 @@ $('randomizeBtn').addEventListener('click', () => {
   const choose = values => values[Math.floor(Math.random() * values.length)];
   const mass = Math.round((.3 + Math.random() * 2.7) * 10) / 10;
   const atmosphere = choose(Object.keys(ATMOSPHERES));
-  const params = { ...DEFAULTS, starType: choose(Object.keys(STARS)), orbital: choose(Object.keys(ZONES)), atmosphere,
+  const params = { ...DEFAULTS, biosphere: $('imaginedBiosphere').value, starType: choose(Object.keys(STARS)), orbital: choose(Object.keys(ZONES)), atmosphere,
     massEarth: mass, radiusEarth: Math.round(mass ** .28 * 10) / 10, tilt: Math.floor(Math.random() * 70),
     water: atmosphere.includes('none') || atmosphere.includes('hydrogen') ? 0 : Math.floor(Math.random() * 101), pressureBar: ATMOSPHERES[atmosphere].pressure };
   setControls(params); $('parameterDetails').open = true; $('parameterDetails').scrollIntoView({ behavior: reducedMotion() ? 'instant' : 'smooth' }); announce('New fictional scenario selected. Initiate a survey to explore it.');

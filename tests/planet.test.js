@@ -128,3 +128,33 @@ test('invented geography is repeatable and obeys ocean, dry and gas scenarios', 
   assert.match(spec({ ...p, orbital: 'inner edge (very hot)', atmosphere: 'thick CO2 (Venus-like)', pressureBar: 90 }).geography, /no open liquid seas/);
   assert.match(spec({ ...p, atmosphere: 'hydrogen-helium envelope', pressureBar: 10, water: 0 }).geography, /no continents/);
 });
+
+test('biosphere modes survive report round trips without changing physics or geography', () => {
+  const reference = calculate(p), baseGeography = visualSpec(p, reference).geography;
+  for (const biosphere of ['none', 'familiar', 'alien']) {
+    const params = { ...p, biosphere }, r = createReport({ params });
+    assert.deepEqual(r.physics, reference);
+    assert.equal(visualSpec(params, r.physics).geography, baseGeography);
+    assert.equal(restoreReport(serializeReport(r)).params.biosphere, biosphere);
+  }
+  const { biosphere, ...legacy } = p;
+  assert.equal(validateParams(legacy).biosphere, 'familiar');
+  for (const value of ['custom prompt', null, 42]) assert.throws(() => validateParams({ ...p, biosphere: value }));
+  assert.equal(visualSpec({ ...p, biosphere: 'none' }, reference).vegetation, false);
+});
+test('alien morphology and pigments respond to stars, gravity, water, temperature and pressure', () => {
+  const spec = changes => { const params = { ...p, biosphere: 'alien', ...changes }; return visualSpec(params, calculate(params)); };
+  const sun = spec({}), red = spec({ starType: 'M-type (red dwarf)' });
+  assert.notEqual(sun.biology.palette, red.biology.palette);
+  assert.notEqual(sun.biology.forms, red.biology.forms);
+  assert.match(red.biology.forms, /membrane fans/);
+  assert.match(spec({ massEarth: .5 }).biology.forms, /tall slender/);
+  assert.match(spec({ massEarth: 2 }).biology.forms, /low interlocking/);
+  assert.match(spec({ water: 10 }).biology.habitat, /Sparse drought/);
+  assert.match(spec({ water: 100 }).biology.forms, /floating/);
+  assert.match(spec({ pressureBar: .3, orbital: 'inner habitable zone' }).biology.forms, /ground-hugging/);
+  assert.match(spec({ pressureBar: 3 }).biology.habitat || '', /Sparse folded/);
+  const frozen = spec({ orbital: 'outer edge (very cold)' }); assert.equal(frozen.vegetation, false);
+  const gas = spec({ atmosphere: 'hydrogen-helium envelope', water: 0, pressureBar: 10 }); assert.equal(gas.vegetation, false);
+  assert.match(sun.biosphere, /no familiar Earth trees, ferns/);
+});

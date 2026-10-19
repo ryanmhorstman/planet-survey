@@ -69,6 +69,22 @@ try {
     await page.reload(); await page.locator('#planetNameDisplay').waitFor(); assert.equal(await page.locator('#planetNameDisplay').textContent(), 'Boreal · Reference 07');
     results.push(`${width}px: initial action, report, overflow and refresh passed`); await ctx.close();
   }
+  // Artistic mode reaches both providers and persists independently of numerical estimates.
+  const modes = await context({ viewport: { width: 1440, height: 1000 } }, true), mp = await modes.newPage();
+  const sentModes = [];
+  await modes.route('**/api/analyze', route => { sentModes.push(route.request().postDataJSON().params.biosphere); return route.fulfill({ json: { narrative } }); });
+  await modes.route('**/api/image', route => { sentModes.push(route.request().postDataJSON().params.biosphere); return route.fulfill({ json: { asset: orbital } }); });
+  await mp.goto(origin); await mp.locator('#imaginedBiosphere').selectOption('alien');
+  await mp.locator('#starType').selectOption('M-type (red dwarf)');
+  assert.match(await mp.locator('#biosphereHelp').textContent(), /membrane fans/);
+  await mp.locator('#generateBtn').click(); await mp.locator('#planetImage').waitFor();
+  await waitFor(() => sentModes.length === 2, 'Mode did not reach both providers'); assert.deepEqual(sentModes, ['alien', 'alien']);
+  await mp.reload(); await mp.locator('#planetNameDisplay').waitFor();
+  assert.equal(await mp.locator('#imaginedBiosphere').inputValue(), 'alien');
+  assert.match(await mp.locator('#sourceFacts').textContent(), /Alien mode/);
+  await mp.locator('#randomizeBtn').click(); assert.equal(await mp.locator('#imaginedBiosphere').inputValue(), 'alien');
+  await mp.locator('#imaginedBiosphere').selectOption('none'); assert.match(await mp.locator('#biosphereHelp').textContent(), /intentionally omitted/);
+  results.push('Biosphere control reaches both APIs, persists on refresh and survives randomization'); await modes.close();
   // The reduced mode is explicit, and a failed startup capability request is recoverable.
   const offline = await context(), op = await offline.newPage(); let offlineCalls = 0;
   offline.on('request', request => { if (/\/api\/(analyze|image)$/.test(request.url())) offlineCalls++; });

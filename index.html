@@ -66,6 +66,12 @@
               <option value="hydrogen-helium envelope">H₂/He — gas envelope</option><option value="none (airless body)">None — airless</option>
             </select>
           </div>
+          <div class="param"><label class="param-label" for="imaginedBiosphere">Imagined biosphere</label>
+            <select class="param-select" id="imaginedBiosphere" name="biosphere" aria-describedby="biosphereHelp">
+              <option value="none">None — mineral worlds</option><option value="familiar" selected>Familiar — vegetation-like forms</option><option value="alien">Alien — unfamiliar biology</option>
+            </select>
+            <p class="field-hint" id="biosphereHelp">Invented biology, not a life prediction. Conditions guide its appearance.</p>
+          </div>
           <div class="param"><label class="param-label" for="waterCoverage">Water / ice inventory</label>
             <div class="slider-row"><input type="range" class="param-slider" id="waterCoverage" name="water" min="0" max="100" value="70" aria-describedby="waterHelp"><output class="slider-val" id="waterVal" for="waterCoverage">70%</output></div>
             <p class="field-hint" id="waterHelp">Assumed coverage; the model estimates its phase.</p>
