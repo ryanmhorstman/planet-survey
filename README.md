@@ -1,0 +1,83 @@
+# PSU-7 · Planetary Survey Unit
+
+An instrument for imagined worlds: deterministic planetary estimates, NASA catalogue starting points, and speculative AI field notes and imagery. The illustrated Boreal reference survey and the numerical model work without API credentials.
+
+## Develop
+
+Use Node.js 24.x.
+
+```sh
+npm ci
+npm run dev
+```
+
+Open `http://127.0.0.1:3000`. `PORT` changes the port. The development server runs the same API handlers as Vercel; it is a small local adapter, not a full Vercel emulator. Copy `.env.example` to `.env.local` to configure optional services. Never commit credential values.
+
+For Codex cloud's HTTPS proxy, use:
+
+```sh
+node --use-env-proxy --env-file-if-exists=.env.local scripts/dev-server.js
+```
+
+`npm run build` produces the public static files in `dist/`. Vercel separately deploys the root `api/` functions. Only browser-safe modules are copied into `dist/lib`; server credentials and storage code stay server-side.
+
+## Vercel deployment
+
+1. Import this repository into Vercel using Node.js 24.x. `vercel.json` supplies the build command, output directory, security headers and function durations. The selected plan must permit the 90-second image function duration.
+2. Create a **public Vercel Blob store** and connect it to the project. Set its `BLOB_READ_WRITE_TOKEN` in the server environment. Generated WebP images and versioned report JSON are stored there.
+3. Create an **Upstash Redis** database. Map its REST endpoint and REST token to `RATE_LIMIT_REDIS_REST_URL` and `RATE_LIMIT_REDIS_REST_TOKEN`. These are the REST credentials, not a Redis TCP URL/password. Use a separate database for previews if their quotas should be independent.
+4. Set `ANTHROPIC_API_KEY` for field interpretations and `OPENAI_API_KEY` for imagery. `PLANET_OPENAI_KEY` is an alternative image-key name for cloud environments that reserve `OPENAI_` names. Models currently used: `claude-sonnet-4-5` and `gpt-image-1`; the accounts must have access to them.
+5. Set `SITE_URL` to the final production origin, such as `https://your-domain.example`, or enable Vercel's system environment variables. The build falls back to `VERCEL_PROJECT_PRODUCTION_URL`, then `VERCEL_URL`, and emits absolute canonical/social image URLs. Shared reports currently use the site's generic social card.
+6. Review `DAILY_ANALYSIS_LIMIT`, `DAILY_IMAGE_LIMIT`, and `DAILY_SHARE_LIMIT`, and configure account spending controls with the AI providers. Deploy, then complete the [release rehearsal](docs/RELEASE.md).
+
+No credential is needed for NASA catalogue requests. Missing services are reported through `/api/capabilities`; the frontend keeps reference and model reports available. Blob is required for live imagery so every returned image has a durable reference. Shared quotas are required for all live production generation and report publication. `PSU7_ALLOW_LOCAL_QUOTAS=true` enables a simple hourly in-memory limiter only for local development; it is ignored on Vercel and in production.
+
+For restricted outbound networks allow `api.anthropic.com`, `api.openai.com`, `exoplanetarchive.ipac.caltech.edu`, `vercel.com`, the connected `*.public.blob.vercel-storage.com` store, and the exact Upstash REST hostname. Fonts are self-hosted. Blob's SDK derives the store ID from its token, and image signatures use that token locally: it requires an actual server-side token, not a placeholder intended solely for proxy substitution.
+
+## Reports and quotas
+
+Reports own their parameters, catalogue measurements, derived estimates, interpretation, and both image references. Asynchronous tasks update their originating report. The last five reports are kept in local storage; Save report exports portable JSON, and Open saved report imports it. Exported files contain image URLs, not embedded image bytes. Download view saves the selected image itself.
+
+Create public link stores an immutable snapshot under a random UUID. Anyone with the link can read it and its public images. Changes made after publication require a new link. Images are verified with a server HMAC before inclusion in a newly published report. Reading an existing report does not recheck old signatures, so key rotation does not break existing links; re-publishing an old image after rotation requires re-signing it or generating a new image. Numerical fields are recalculated on load, never accepted from imported JSON or AI output. Original fragment links still open with recalculated values, but cannot recover imagery that those links never saved.
+
+The Upstash Lua reservation atomically enforces:
+
+| Operation | Per IP / hour | Global / 24 hours (default) | Concurrent requests |
+| --- | ---: | ---: | ---: |
+| Interpretation | 20 | 500 | 8 |
+| Image | 12 | 100 | 3 |
+| Public report | 20 | 500 | 8 |
+
+Windows start at the first request, rather than UTC midnight. Failed attempts consume allowance; limits count requests, not dollars. IP keys are HMAC-hashed, and shared NAT users share an allowance. Concurrency leases expire after 90 seconds even if a process disappears. A quota-store outage prevents new paid requests. The Redis integration test exercises actual concurrent Lua execution.
+
+Public Blob objects persist until an operator deletes them. Deleting a report or its referenced image breaks the corresponding link; clearing browser history does not delete public objects. Review retention and storage costs before promoting the site. There is no automatic garbage collection in this version.
+
+## Scientific scope
+
+`lib/planet.js` is shared by the browser and server. It computes gravity, density, escape speed, stellar-mass-aware orbital periods, and a simplified energy-balance temperature with an assumed greenhouse offset. Rotation is an input; prograde solar-day duration is calculated relative to the orbit. Measured NASA mass, radius and orbital values retain their original precision. Atmosphere, pressure, water, rotation, tilt and terrain on catalogue worlds remain explicit scenario assumptions.
+
+The displayed surface suitability is an illustrative 100-point rubric: temperature 40, plausible exposed liquid water 25, pressure 20, atmosphere 15. Airless worlds score zero; gas envelopes have no surface rating. ESI is a separate four-variable similarity index. Neither is a probability of life or a safety assessment. Classification and both image prompts use the same temperature/phase results and deterministic visual specification. Gas worlds offer a cloud-deck viewpoint.
+
+This is not a climate, atmospheric escape, orbital stability, geology, tidal evolution, biosphere or seasonal simulation. Water and tilt do not change the mean energy-balance estimate. Catalogue equilibrium temperatures may use different assumptions. The water-phase approximation is illustrative, especially at high pressures. The sample illustration is an artistic reference, not a validated rendering. Prompt constraints reduce image contradictions but cannot guarantee visual compliance.
+
+## Verification
+
+```sh
+npm run check
+npm test
+npm run build
+npx playwright-core install chromium
+npm run test:browser
+```
+
+Browser checks use a system `/usr/bin/chromium` if available; otherwise the Playwright-managed browser. `CHROMIUM_PATH` overrides it. They start an isolated local server on port 3002 (`TEST_PORT` overrides), use controlled API responses, and write screenshots and axe results to ignored `test-results/`.
+
+To include the real Redis concurrency test, install Redis and set executable paths:
+
+```sh
+REDIS_SERVER=/usr/bin/redis-server REDIS_CLI=/usr/bin/redis-cli npm test
+```
+
+The Redis test uses a temporary Unix socket with persistence disabled; it never connects to a configured production database. Without `REDIS_SERVER`, this test is explicitly skipped. Blob tests intercept the real SDK's HTTP requests; they do not need a live store. Browser tests do not make paid generation requests. GitHub Actions runs the build, unit/API/storage tests, real Redis test, Chromium flows and automated accessibility checks.
+
+Fonts: EB Garamond and Space Mono, self-hosted with licenses in `assets/fonts/`.
