@@ -1047,6 +1047,7 @@ input:focus-visible, select:focus-visible { outline:3px solid var(--gold); outli
 .generate-btn:hover { color:var(--gold-light); }
 .reference-btn { background:none; border:0; color:var(--ink-soft); font-size:11px; padding:12px 4px; width:100%; min-height:44px; text-decoration:underline; text-underline-offset:4px; cursor:pointer; }
 .parameter-details > summary { padding:18px 24px; cursor:pointer; color:var(--ink); border-bottom:1px solid var(--gold-rule); font-size:12px; }
+.service-notice { min-height:3em; margin:12px 0 0; color:var(--ink-soft); font-size:11px; line-height:1.5; text-align:center; }
 .parameter-details summary span { display:block; color:var(--ink-soft); font-size:10px; margin:4px 0 0 16px; }
 .params { padding:8px 24px 20px; gap:0; }
 .param { padding:12px 0; }

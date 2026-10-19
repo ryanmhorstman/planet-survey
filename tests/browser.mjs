@@ -69,6 +69,22 @@ try {
     await page.reload(); await page.locator('#planetNameDisplay').waitFor(); assert.equal(await page.locator('#planetNameDisplay').textContent(), 'Boreal · Reference 07');
     results.push(`${width}px: initial action, report, overflow and refresh passed`); await ctx.close();
   }
+  // The reduced mode is explicit, and a failed startup capability request is recoverable.
+  const offline = await context(), op = await offline.newPage(); let offlineCalls = 0;
+  offline.on('request', request => { if (/\/api\/(analyze|image)$/.test(request.url())) offlineCalls++; });
+  await op.goto(origin); await op.locator('#generateBtn').click();
+  await waitFor(async () => (await op.locator('#reportServiceNotice').textContent()).includes('Model reports only'), 'Missing model-only availability message');
+  assert.equal(offlineCalls, 0); await offline.close();
+  const recovered = await context({}, true), cp = await recovered.newPage(); let capabilityCalls = 0, recoveredAnalysis = 0, recoveredImages = 0;
+  await recovered.route('**/api/capabilities', route => { capabilityCalls++; return route.fulfill(capabilityCalls === 1 ? { status: 503, json: { error: 'Temporarily unavailable' } } : { json: { analysis: true, images: true, sharing: true } }); });
+  await recovered.route('**/api/analyze', route => { recoveredAnalysis++; return route.fulfill({ json: { narrative } }); });
+  await recovered.route('**/api/image', route => { recoveredImages++; return route.fulfill({ json: { asset: orbital } }); });
+  await cp.goto(origin);
+  await waitFor(async () => (await cp.locator('#serviceNotice').textContent()).includes('could not be reached'), 'Startup failure did not appear');
+  await cp.locator('#generateBtn').click();
+  await waitFor(() => recoveredAnalysis === 1 && recoveredImages === 1, 'Initiate Survey did not recover both AI requests');
+  await cp.locator('#planetImage').waitFor(); assert.equal(capabilityCalls, 2);
+  results.push('Model-only mode is explicit; Initiate Survey recovers from a failed capability request'); await recovered.close();
   // Server failures and retries preserve the model; a surface can finish before an orbit.
   const ctx = await context({ viewport: { width: 1440, height: 1000 } }, true), page = await ctx.newPage();
   let analysisCalls = 0, orbitalCalls = 0, surfaceCalls = 0, saved;

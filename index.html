@@ -37,6 +37,7 @@
     <div class="primary-actions">
       <button class="generate-btn" id="generateBtn" data-action="survey" type="button"><span aria-hidden="true">◈</span> Initiate survey</button>
       <button class="reference-btn" data-action="sample" type="button">Explore a reference world <span aria-hidden="true">↗</span></button>
+      <p class="service-notice" id="serviceNotice" role="status">Model reports available · checking live services…</p>
     </div>
     <details class="parameter-details" id="parameterDetails">
       <summary>Tune survey parameters <span id="parameterSummary">Earth-like starting assumptions</span></summary>
@@ -97,6 +98,7 @@
     <p class="page-notice" id="pageNotice" hidden></p>
     <section class="report" id="resultState" hidden aria-labelledby="planetNameDisplay">
       <header class="report-header"><div><p class="eyebrow" id="reportOrigin">SPECULATIVE FIELD REPORT</p><h2 id="planetNameDisplay" tabindex="-1"></h2><p id="planetClassDisplay"></p></div><button class="text-btn" id="editParamsBtn" type="button">Adjust parameters</button></header>
+      <p class="page-notice" id="reportServiceNotice" hidden></p>
       <ol class="survey-stages" aria-label="Survey stages"><li id="stageModel">01 · Model calculated</li><li id="stageOrbital">02 · Orbital view</li><li id="stageSurface">03 · Surface view</li></ol>
       <div class="planet-view">
         <div class="view-toggle" role="group" aria-label="Viewpoint"><button class="view-toggle-btn active" id="btnOrbital" type="button" aria-pressed="true">Orbital</button><button class="view-toggle-btn" id="btnSurface" type="button" aria-pressed="false">Surface</button></div>

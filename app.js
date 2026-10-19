@@ -3,7 +3,7 @@ import { restoreReport, serializeReport, restoreLegacy, safeAsset } from './lib/
 
 const $ = id => document.getElementById(id);
 const state = { reports: [], activeId: null, view: 'orbital', catalog: null, tasks: new Map(),
-  capabilities: { analysis: false, images: false, sharing: false }, browseFilter: 'all', browseController: null };
+  capabilities: { analysis: false, images: false, sharing: false }, capabilityStatus: 'loading', browseFilter: 'all', browseController: null };
 const active = () => state.reports.find(r => r.id === state.activeId);
 const STORE = 'psu7-reports-v2';
 const fields = { starType: 'starType', orbital: 'orbitalZone', atmosphere: 'atmosphere', water: 'waterCoverage', massEarth: 'planetMass', radiusEarth: 'planetRadius', tilt: 'axialTilt', rotationHours: 'rotationHours', pressureBar: 'pressureBar' };
@@ -11,6 +11,18 @@ const format = (n, digits = 2) => new Intl.NumberFormat('en', { maximumFractionD
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 function announce(message) { $('announcer').textContent = message; }
 function notice(message) { $('pageNotice').textContent = message; $('pageNotice').hidden = !message; }
+function renderAvailability() {
+  const { analysis, images } = state.capabilities;
+  const message = state.capabilityStatus === 'loading' ? 'Model reports available · checking live services…'
+    : state.capabilityStatus === 'error' ? 'Model reports only · live services could not be reached.'
+    : analysis && images ? 'Live interpretation and imagery available.'
+    : analysis ? 'Live interpretation available · imagery unavailable.'
+    : images ? 'Live imagery available · interpretation unavailable.'
+    : 'Model reports only · live interpretation and imagery unavailable.';
+  $('serviceNotice').textContent = message;
+  $('reportServiceNotice').textContent = message;
+  $('reportServiceNotice').hidden = Boolean(active()?.sample) || (state.capabilityStatus === 'ready' && analysis && images);
+}
 function runtime(r) { return r.runtime ||= { analysis: 'idle', orbital: 'idle', surface: 'idle', errors: {} }; }
 function persist() {
   try { localStorage.setItem(STORE, JSON.stringify({ selected: state.activeId, reports: state.reports.map(serializeReport) })); }
@@ -99,6 +111,7 @@ function addFact(label, text) {
   const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = label; dd.textContent = text; $('sourceFacts').append(dt, dd);
 }
 function render() {
+  renderAvailability();
   const r = active(); renderHistory(); if (!r) return;
   const p = r.params, f = r.physics, rt = runtime(r), asset = r.images[state.view];
   $('idleState').hidden = true; $('resultState').hidden = false;
@@ -209,7 +222,7 @@ async function generate() {
   const r = createReport({ params, catalog: state.catalog, name: `PSU-${number}` });
   remember(r); selectReport(r); announce(`Model report ready for ${r.name}.`);
   runtime(r).launching = true;
-  await capabilityReady;
+  await refreshCapabilities();
   runtime(r).launching = false;
   if (state.capabilities.analysis) void requestNarrative(r);
   if (state.capabilities.images) void requestImage(r, 'orbital');
@@ -335,9 +348,22 @@ $('importReport').addEventListener('change', async event => {
   catch (error) { notice(`This report could not be opened. ${error.message}`); }
   event.target.value = '';
 });
-const capabilityReady = request('/api/capabilities', {}, 6000).then(data => {
-  state.capabilities = { analysis: data.analysis === true, images: data.images === true, sharing: data.sharing === true }; if (active()) render();
-}).catch(() => { notice('Live services could not be reached. You can still explore the reference world and model reports.'); });
+let capabilityRequest = null;
+function refreshCapabilities() {
+  if (capabilityRequest) return capabilityRequest;
+  state.capabilityStatus = 'loading'; renderAvailability();
+  capabilityRequest = request('/api/capabilities', {}, 6000).then(data => {
+    if (!['analysis', 'images', 'sharing'].every(key => typeof data[key] === 'boolean')) throw new Error('Invalid service response');
+    state.capabilities = { analysis: data.analysis, images: data.images, sharing: data.sharing };
+    state.capabilityStatus = 'ready';
+  }).catch(() => {
+    state.capabilities = { analysis: false, images: false, sharing: false }; state.capabilityStatus = 'error';
+  }).finally(() => {
+    capabilityRequest = null; renderAvailability(); if (active()) render();
+  });
+  return capabilityRequest;
+}
+void refreshCapabilities();
 async function boot() {
   setControls(DEFAULTS);
   $('parameterDetails').open = !matchMedia('(max-width: 960px)').matches;

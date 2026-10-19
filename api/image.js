@@ -10,7 +10,8 @@ export function createImageHandler({ request = providerJSON, save = storeImage, 
       const input = body(req), { params, catalog } = validateSurvey(input);
       if (!['orbital', 'surface'].includes(input.view)) throw new InputError('Choose orbital or surface view.');
       const key = process.env.OPENAI_API_KEY || process.env.PLANET_OPENAI_KEY;
-      if (!key || !process.env.BLOB_READ_WRITE_TOKEN) throw new ServiceError(503, 'Live imagery is unavailable. The model report is ready to explore.');
+      if (!key) throw new ServiceError(503, 'Live imagery is unavailable. The model report is ready to explore.', 'IMAGE_PROVIDER_NOT_CONFIGURED');
+      if (!process.env.BLOB_READ_WRITE_TOKEN) throw new ServiceError(503, 'Image storage is not configured yet. The model report is ready to explore.', 'IMAGE_STORAGE_NOT_CONFIGURED');
       release = await quota(req, 'image');
       const data = await request('https://api.openai.com/v1/images/generations', {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
