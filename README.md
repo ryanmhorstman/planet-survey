@@ -60,6 +60,8 @@ Public Blob objects persist until an operator deletes them. Deleting a report or
 
 The displayed surface suitability is an illustrative 100-point rubric: temperature 40, plausible exposed liquid water 25, pressure 20, atmosphere 15. Airless worlds score zero; gas envelopes have no surface rating. ESI is a separate four-variable similarity index. Neither is a probability of life or a safety assessment. Classification and both image prompts use the same temperature/phase results and deterministic visual specification. Gas worlds offer a cloud-deck viewpoint.
 
+Fictional geography is designed from scratch, with a parameter-derived arrangement of landmasses and water basins rather than Earth's continent map. Mild, liquid-water nitrogen-atmosphere scenarios with exposed land can include explicitly imagined vegetation. Its palette and growth forms are shared by the interpretation and both image viewpoints; these are artistic choices, not detected life or a biological prediction. Frozen, airless, hot, gas-envelope and entirely ocean-covered scenarios do not receive land vegetation. Existing saved images remain unchanged; initiate a new survey to use updated art direction.
+
 This is not a climate, atmospheric escape, orbital stability, geology, tidal evolution, biosphere or seasonal simulation. Water and tilt do not change the mean energy-balance estimate. Catalogue equilibrium temperatures may use different assumptions. The water-phase approximation is illustrative, especially at high pressures. The sample illustration is an artistic reference, not a validated rendering. Prompt constraints reduce image contradictions but cannot guarantee visual compliance.
 
 ## Verification

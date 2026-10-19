@@ -90,3 +90,41 @@ test('representative atmospheres all produce finite numerical results', () => {
     for (const field of ['temperatureC', 'gravityG', 'escapeKms', 'yearDays', 'density']) assert.ok(Number.isFinite(f[field]), `${atmosphere}: ${field}`);
   }
 });
+
+test('mild land-and-water worlds include consistent imagined vegetation in both views', () => {
+  for (const starType of ['G-type (Sun-like)', 'K-type (orange dwarf)']) {
+    const params = { ...p, starType, water: 41, massEarth: 1.24699, radiusEarth: 1.31536 }, f = calculate(params), spec = visualSpec(params, f);
+    assert.equal(spec.vegetation, true);
+    assert.match(spec.biosphere, /speculative vegetation/);
+    assert.match(spec.biosphere, /foreground/);
+    assert.match(spec.palette, /green/);
+    for (const view of ['orbital', 'surface']) {
+      const prompt = imagePrompt(params, f, view);
+      assert.ok(prompt.includes(spec.geography)); assert.ok(prompt.includes(spec.biosphere));
+      assert.match(prompt, /^Create an ORIGINAL EXOPLANET/);
+      assert.match(prompt, /do not merely rotate or recolor an Earth globe/);
+    }
+    assert.match(createReport({ params }).narrative.description, /not evidence of life/);
+  }
+});
+test('vegetation art direction respects hostile environments and exposed land', () => {
+  const cases = [
+    { ...p, orbital: 'inner edge (very hot)' }, { ...p, orbital: 'outer edge (very cold)' },
+    { ...p, atmosphere: 'none (airless body)', pressureBar: 0, water: 0 },
+    { ...p, atmosphere: 'hydrogen-helium envelope', pressureBar: 10, water: 0 },
+    { ...p, atmosphere: 'thick CO2 (Venus-like)', pressureBar: 90 },
+    { ...p, water: 0 }, { ...p, water: 100 }, { ...p, pressureBar: .001 },
+  ];
+  for (const params of cases) {
+    const spec = visualSpec(params, calculate(params));
+    assert.equal(spec.vegetation, false); assert.match(spec.biosphere, /no forests, plants/);
+  }
+});
+test('invented geography is repeatable and obeys ocean, dry and gas scenarios', () => {
+  const spec = params => visualSpec(params, calculate(params));
+  assert.equal(spec(p).geography, spec({ ...p }).geography);
+  assert.match(spec({ ...p, water: 100 }).geography, /no exposed land or islands/);
+  assert.match(spec({ ...p, water: 0 }).geography, /no open liquid seas/);
+  assert.match(spec({ ...p, orbital: 'inner edge (very hot)', atmosphere: 'thick CO2 (Venus-like)', pressureBar: 90 }).geography, /no open liquid seas/);
+  assert.match(spec({ ...p, atmosphere: 'hydrogen-helium envelope', pressureBar: 10, water: 0 }).geography, /no continents/);
+});
