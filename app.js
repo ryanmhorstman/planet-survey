@@ -39,6 +39,20 @@ const state = {
 };
 const active = () => state.reports.find((r) => r.id === state.activeId);
 const STORE = "psu7-reports-v2";
+// Retain the experiment for development without exposing it in the public journey.
+const cartographyPreview = (() => {
+  try {
+    return sessionStorage.getItem("psu7-cartography-preview") === "1";
+  } catch {
+    return false;
+  }
+})();
+$("instrumentTabs").hidden = !cartographyPreview;
+if (cartographyPreview) {
+  $("illustrationPanel").setAttribute("role", "tabpanel");
+  $("illustrationPanel").setAttribute("aria-labelledby", "tabIllustration");
+}
+
 const fields = {
   starType: "starType",
   orbital: "orbitalZone",
@@ -302,6 +316,7 @@ let cartographyController = null;
 let cartographyReport = null;
 let cartographyEpoch = 0;
 function syncInstrument() {
+  if (!cartographyPreview) state.instrument = "illustration";
   const cartography = state.instrument === "cartography",
     r = active();
   $("illustrationPanel").hidden = cartography;
@@ -386,6 +401,7 @@ for (const [id, instrument] of [
   ["tabCartography", "cartography"],
 ]) {
   $(id).addEventListener("click", () => {
+    if (!cartographyPreview) return;
     state.instrument = instrument;
     syncInstrument();
   });
@@ -534,8 +550,17 @@ function render() {
         : "Model report ready";
   const token = `${r.id}:${state.view}:${asset?.url}`;
   image.dataset.token = token;
+  $("imageOpen").dataset.format =
+    asset?.kind === "reference" ? "wide" : "standard";
+  $("illustrationPanel").setAttribute(
+    "aria-busy",
+    String(rt[state.view] === "pending"),
+  );
   if (asset && !failed) {
-    image.alt = `${r.name} — ${state.view === "orbital" ? "orbital" : visualSpec(p, f).view.toLowerCase()} artist interpretation`;
+    image.alt =
+      asset.kind === "reference"
+        ? "Boreal: an imagined ice-rich globe with pale ice fields, blue basins and ochre terrain against space."
+        : `${r.name} — imagined ${state.view === "orbital" ? "orbital" : visualSpec(p, f).view.toLowerCase()} illustration of a ${f.classification.split(" — ")[1]?.toLowerCase() || "fictional"} world.`;
     image.onerror = () => {
       if (image.dataset.token !== token || active()?.id !== r.id) return;
       rt[state.view] = "error";
@@ -551,17 +576,18 @@ function render() {
     `Expand ${state.view} image of ${r.name}`,
   );
   $("expandHint").hidden = !asset || failed;
-  $("viewOnGlobe").hidden = state.view !== "orbital" || !asset?.globeView;
+  $("viewOnGlobe").hidden =
+    !cartographyPreview || state.view !== "orbital" || !asset?.globeView;
   $("planetLabel").textContent =
     asset?.kind === "reference"
       ? "Reference illustration · imagined landscape"
       : asset?.globeView
-        ? "Globe-guided interpretation · exact details may differ"
+        ? "AI illustration · guided by the planetary model"
         : "Artist interpretation · no surface observation implied";
   $("downloadBtn").disabled = !asset || failed;
   $("imageStatus").textContent =
     rt[state.view] === "pending"
-      ? "Rendering this view. You can read the report or explore another survey."
+      ? "Composing this illustration. It may take about a minute; your field report is ready to read below."
       : rt.errors[state.view] ||
         (!asset
           ? state.capabilities.images
@@ -843,7 +869,7 @@ function showExpandedImage(asset, title, filename) {
 $("viewOnGlobe").addEventListener("click", () => {
   const r = active(),
     view = r?.images.orbital?.globeView;
-  if (!view) return;
+  if (!cartographyPreview || !view) return;
   orbitalViewRequest = { report: r, view };
   state.instrument = "cartography";
   syncInstrument();
@@ -1224,3 +1250,37 @@ async function boot() {
   }
 }
 void boot();
+
+// The masthead returns to the introduction while keeping every saved survey.
+document
+  .querySelector('[data-action="home"]')
+  .addEventListener("click", (event) => {
+    if (
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    )
+      return;
+    event.preventDefault();
+    state.activeId = null;
+    state.view = "orbital";
+    state.instrument = "illustration";
+    orbitalViewRequest = null;
+    syncInstrument();
+    $("idleState").hidden = false;
+    $("resultState").hidden = true;
+    $("app").classList.remove("report-first");
+    notice("");
+    setControls(DEFAULTS);
+    persist();
+    renderAvailability();
+    renderHistory();
+    history.replaceState(null, "", location.pathname);
+    $("welcomeTitle").focus({ preventScroll: true });
+    window.scrollTo({
+      top: 0,
+      behavior: reducedMotion() ? "instant" : "smooth",
+    });
+  });

@@ -17,6 +17,7 @@ const server = spawn(process.execPath, ["scripts/dev-server.js"], {
 const errors = [],
   results = [];
 let browser;
+let cartographyPreviewTests = true;
 const image = await readFile(
   new URL("../assets/sample-orbital.webp", import.meta.url),
 );
@@ -66,6 +67,11 @@ async function context(options = {}, live = false) {
   await context.route("**/api/exoplanets?*", (route) =>
     route.fulfill({ json: { planets: [catalog] } }),
   );
+  if (cartographyPreviewTests)
+    await context.addInitScript(() => {
+      if (location.protocol === "http:" || location.protocol === "https:")
+        sessionStorage.setItem("psu7-cartography-preview", "1");
+    });
   context.on("page", (page) =>
     page.on("pageerror", (error) => errors.push(error.message)),
   );
@@ -1010,6 +1016,7 @@ try {
       "Surface expeditions: explicit generation, per-location late response isolation, deduplication, decode reload without generation, notes retry, lightbox/download, sharing, export and refresh passed",
     );
   }
+  cartographyPreviewTests = false;
   for (const [width, height] of [
     [320, 740],
     [375, 812],
@@ -1038,6 +1045,20 @@ try {
       });
     }
     await page.locator(".reference-btn").click();
+    assert.equal(await page.locator("#instrumentTabs").isVisible(), false);
+    assert.equal(await page.locator("#viewOnGlobe").isVisible(), false);
+    assert.equal(
+      await page.locator("#illustrationPanel").getAttribute("role"),
+      null,
+    );
+    assert.equal(
+      await page.evaluate(() =>
+        performance
+          .getEntriesByType("resource")
+          .some((r) => /\/(globe|geography-worker|three).*\.js/.test(r.name)),
+      ),
+      false,
+    );
     await page.locator("#planetImage").waitFor();
     await waitFor(
       () =>
@@ -1227,6 +1248,75 @@ try {
     "Model-only mode is explicit; Initiate Survey recovers from a failed capability request",
   );
   await recovered.close();
+  // Returning home preserves reports and does not expose or download the experiment.
+  {
+    const ctx = await context({ viewport: { width: 390, height: 844 } });
+    const page = await ctx.newPage();
+    const world = createReport({
+      params: DEFAULTS,
+      name: "Guided public fixture",
+    });
+    world.images.orbital = {
+      ...orbital,
+      globeView: orbitalView(world.cartography),
+      referenceSignature: "b".repeat(64),
+    };
+    await page.addInitScript(
+      (data) => {
+        if (!localStorage.getItem("psu7-reports-v2"))
+          localStorage.setItem("psu7-reports-v2", JSON.stringify(data));
+      },
+      { selected: world.id, reports: [world] },
+    );
+    await page.goto(origin);
+    await page.locator("#planetImage").waitFor();
+    assert.equal(await page.locator("#viewOnGlobe").isVisible(), false);
+    await page.locator("#viewOnGlobe").dispatchEvent("click");
+    assert.equal(await page.locator("#cartographyPanel").isVisible(), false);
+    assert.equal(
+      await page.evaluate(() =>
+        performance
+          .getEntriesByType("resource")
+          .some((r) => /\/(globe|geography-worker|three).*\.js/.test(r.name)),
+      ),
+      false,
+    );
+    await page.locator("#planetImage").waitFor();
+    await page.locator('[data-action="home"]').click();
+    assert.equal(await page.locator("#idleState").isVisible(), true);
+    assert.equal(await page.locator("#resultState").isVisible(), false);
+    assert.equal(
+      await page
+        .locator("#welcomeTitle")
+        .evaluate((e) => e === document.activeElement),
+      true,
+    );
+    assert.equal(await page.locator(".history-item").count(), 1);
+    await page.reload();
+    await page.locator("#generateBtn").waitFor();
+    assert.equal(await page.locator("#idleState").isVisible(), true);
+    await page.locator(".history-item").click();
+    await page.locator("#planetImage").waitFor();
+    assert.equal(await page.locator("#tabCartography").isVisible(), false);
+    await page.emulateMedia({ forcedColors: "active" });
+    await a11y(page, "forced-colors-public");
+    assert.equal(
+      await page
+        .locator("#btnOrbital")
+        .evaluate((e) => getComputedStyle(e).outlineStyle),
+      "solid",
+    );
+    await page.locator("#imageOpen").click();
+    await page.keyboard.press("Escape");
+    assert.equal(
+      await page.evaluate(() => document.activeElement.id),
+      "imageOpen",
+    );
+    await ctx.close();
+    results.push(
+      "Public journey: cartography hidden and unloaded; masthead returns home, restores focus and preserves saved reports across reload",
+    );
+  }
   // Server failures and retries preserve the model; a surface can finish before an orbit.
   const ctx = await context({ viewport: { width: 1440, height: 1000 } }, true),
     page = await ctx.newPage();

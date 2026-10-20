@@ -47,7 +47,9 @@
   <body>
     <a class="skip-link" href="#mainContent">Skip to survey</a>
     <header class="topbar">
-      <a href="/" class="topbar-id">PSU-7 // PLANETARY SURVEY UNIT</a>
+      <a href="/" class="topbar-id" data-action="home"
+        >PSU-7 // PLANETARY SURVEY UNIT</a
+      >
       <span class="topbar-status">EXPLORATORY INSTRUMENT · EST. 2247</span>
       <span class="topbar-worlds">FIELD NOTES FROM POSSIBLE WORLDS</span>
     </header>
@@ -300,7 +302,7 @@
         <section class="welcome" id="idleState" aria-labelledby="welcomeTitle">
           <div class="welcome-heading">
             <p class="eyebrow">FIELD SURVEY / 007</p>
-            <h2 id="welcomeTitle">Survey the possible.</h2>
+            <h2 id="welcomeTitle" tabindex="-1">Survey the possible.</h2>
             <p>
               Choose a star. Shape an atmosphere. Discover a world at the
               intersection of physics and imagination.
@@ -329,8 +331,7 @@
               point.
             </p>
             <p class="microcopy">
-              Illustrated worlds · Open-ended exploration · No life detections
-              implied
+              Calculated physics. AI-generated illustrations. Imagined scenery.
             </p>
           </div>
         </section>
@@ -359,6 +360,8 @@
           </ol>
           <div
             class="instrument-tabs"
+            id="instrumentTabs"
+            hidden
             role="tablist"
             aria-label="Exploration instrument"
           >
@@ -382,11 +385,7 @@
               Cartography <span>PREVIEW</span>
             </button>
           </div>
-          <section
-            id="illustrationPanel"
-            role="tabpanel"
-            aria-labelledby="tabIllustration"
-          >
+          <section id="illustrationPanel" aria-label="Planet illustrations">
             <div class="planet-view">
               <div class="view-toggle" role="group" aria-label="Viewpoint">
                 <button
@@ -446,40 +445,58 @@
           >
             <div id="cartographyMount"></div>
           </section>
-          <div class="stats-row" aria-label="Estimated planetary properties">
+          <section class="analysis-section" aria-labelledby="analysisTitle">
+            <h3 class="analysis-label" id="analysisTitle">
+              // Field interpretation
+            </h3>
+            <p class="narrative-kind" id="narrativeKind"></p>
+            <p class="analysis-body" id="analysisBody"></p>
+            <div class="request-status">
+              <p id="analysisStatus"></p>
+              <button
+                class="action-btn"
+                id="analysisRetry"
+                type="button"
+                hidden
+              >
+                Retry interpretation
+              </button>
+            </div>
+          </section>
+          <dl class="stats-row" aria-label="Estimated planetary properties">
             <div class="stat">
-              <span class="stat-label">Mean temperature · estimate</span
-              ><span class="stat-value" id="statTemp"></span>
+              <dt class="stat-label">Mean temperature · estimate</dt>
+              <dd class="stat-value" id="statTemp"></dd>
             </div>
             <div class="stat">
-              <span class="stat-label">Surface gravity · calculated</span
-              ><span class="stat-value" id="statGravity"></span>
+              <dt class="stat-label">Surface gravity · calculated</dt>
+              <dd class="stat-value" id="statGravity"></dd>
             </div>
             <div class="stat">
-              <span class="stat-label">Escape velocity · calculated</span
-              ><span class="stat-value" id="statEscape"></span>
+              <dt class="stat-label">Escape velocity · calculated</dt>
+              <dd class="stat-value" id="statEscape"></dd>
             </div>
             <div class="stat">
-              <span class="stat-label" id="yearSource">Orbital period</span
-              ><span class="stat-value" id="statYear"></span>
+              <dt class="stat-label" id="yearSource">Orbital period</dt>
+              <dd class="stat-value" id="statYear"></dd>
             </div>
             <div class="stat">
-              <span class="stat-label">Solar day · estimate</span
-              ><span class="stat-value" id="statDay"></span>
+              <dt class="stat-label">Solar day · estimate</dt>
+              <dd class="stat-value" id="statDay"></dd>
             </div>
             <div class="stat">
-              <span class="stat-label">Water phase · estimate</span
-              ><span class="stat-value" id="statWater"></span>
+              <dt class="stat-label">Water phase · estimate</dt>
+              <dd class="stat-value" id="statWater"></dd>
             </div>
             <div class="stat">
-              <span class="stat-label">Bulk density · calculated</span
-              ><span class="stat-value" id="statDensity"></span>
+              <dt class="stat-label">Bulk density · calculated</dt>
+              <dd class="stat-value" id="statDensity"></dd>
             </div>
             <div class="stat">
-              <span class="stat-label">Biosphere</span
-              ><span class="stat-value">Not established</span>
+              <dt class="stat-label">Biosphere</dt>
+              <dd class="stat-value">Not established</dd>
             </div>
-          </div>
+          </dl>
           <section class="hab-section" aria-labelledby="suitabilityTitle">
             <div class="hab-row">
               <h3 class="hab-label" id="suitabilityTitle">
@@ -523,24 +540,6 @@
               Similarity in radius, density, escape velocity and modeled
               temperature. Similarity does not establish habitability.
             </p>
-          </section>
-          <section class="analysis-section" aria-labelledby="analysisTitle">
-            <h3 class="analysis-label" id="analysisTitle">
-              // Field interpretation
-            </h3>
-            <p class="narrative-kind" id="narrativeKind"></p>
-            <p class="analysis-body" id="analysisBody"></p>
-            <div class="request-status">
-              <p id="analysisStatus"></p>
-              <button
-                class="action-btn"
-                id="analysisRetry"
-                type="button"
-                hidden
-              >
-                Retry interpretation
-              </button>
-            </div>
           </section>
           <details class="provenance">
             <summary>Evidence, assumptions & model limits</summary>
@@ -591,12 +590,12 @@
             /></label>
           </div>
         </section>
-        <footer class="footer">
-          <span>PSU-7 // AN EXPLORATORY FICTION</span
-          ><span>CALCULATED · ESTIMATED · IMAGINED</span>
-        </footer>
       </main>
     </div>
+    <footer class="footer">
+      <span>PSU-7 // AN EXPLORATORY FICTION</span
+      ><span>CALCULATED · ESTIMATED · IMAGINED</span>
+    </footer>
     <div
       class="sr-only"
       role="status"

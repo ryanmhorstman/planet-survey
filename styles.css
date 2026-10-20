@@ -1664,7 +1664,7 @@ select:focus-visible {
   font-size: 12px;
 }
 .planet-sphere {
-  background: radial-gradient(circle at 35% 35%, #87a9ad, #38595d, #0e1922);
+  background: radial-gradient(circle at 35% 35%, #a99a77, #4b463b, #171817);
   width: clamp(120px, 20vw, 200px);
   height: auto;
   aspect-ratio: 1;
@@ -2631,4 +2631,138 @@ dialog.lightbox img {
   background: var(--ink);
   color: var(--paper);
   padding: 12px 18px;
+}
+
+/* Submission polish: illustrations lead; instrumentation stays quiet and legible. */
+.image-frame[data-format="wide"] {
+  aspect-ratio: 1200 / 630;
+}
+.analysis-body {
+  max-width: 66ch;
+  font-style: normal;
+  text-wrap: pretty;
+}
+.analysis-section {
+  border-bottom: 1px solid var(--gold-rule);
+}
+.stat-label {
+  font-size: 10px;
+  line-height: 1.6;
+}
+.stat-value {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.stat {
+  padding: 20px 14px;
+}
+.hab-score,
+.esi-score {
+  font-variant-numeric: tabular-nums;
+}
+.score-explanation,
+.field-hint,
+.method-details {
+  font-size: 12px;
+}
+.reference-image > span {
+  align-items: center;
+  min-height: 48px;
+  transition: background-color 180ms ease;
+}
+.reference-image:hover > span,
+.reference-image:focus-visible > span {
+  background: var(--ink-mid);
+}
+.reference-image:focus-visible {
+  outline-offset: 4px;
+}
+#imageStatus {
+  line-height: 1.8;
+}
+@media (max-width: 960px) {
+  .app:has(#idleState:not([hidden])) .panel-header {
+    padding: 18px 24px;
+  }
+  .app:has(#idleState:not([hidden])) .unit-name {
+    font-size: 28px;
+    line-height: 1.2;
+  }
+  .app:has(#idleState:not([hidden])) .unit-name em {
+    margin-left: 0.2em;
+  }
+  .app:has(#idleState:not([hidden])) .unit-name br,
+  .app:has(#idleState:not([hidden])) .unit-subtitle {
+    display: none;
+  }
+  .welcome-heading {
+    padding: 24px 24px 20px;
+  }
+  .welcome h2 {
+    font-size: clamp(32px, 8vw, 40px);
+    margin-bottom: 12px;
+  }
+  .welcome-heading > p:last-child {
+    font-size: 19px;
+    line-height: 1.4;
+  }
+  .secondary-controls {
+    flex-direction: row;
+  }
+  .secondary-controls > button {
+    min-width: 0;
+    padding: 12px 8px;
+    font-size: 10px;
+    letter-spacing: 0.4px;
+  }
+  .stat {
+    padding: 16px 12px;
+  }
+  .stat-value {
+    font-size: 14px;
+  }
+}
+@media (max-width: 480px) {
+  .app:has(#idleState:not([hidden])) .parameter-details summary span {
+    display: none;
+  }
+  .report-header #planetClassDisplay,
+  .narrative-kind,
+  .image-caption {
+    font-size: 11px;
+  }
+  .view-toggle {
+    justify-content: stretch;
+  }
+  .view-toggle-btn {
+    flex: 1;
+  }
+}
+
+/* The site footer follows both the report and the mobile survey controls. */
+body > .footer {
+  position: relative;
+  z-index: 1;
+}
+
+@media (forced-colors: active) {
+  .topbar-id {
+    color: LinkText;
+  }
+  .generate-btn,
+  .generate-btn:hover {
+    background: ButtonFace;
+    color: ButtonText;
+  }
+  .view-toggle-btn.active {
+    outline: 2px solid Highlight;
+    outline-offset: -4px;
+    font-weight: 700;
+  }
+  :focus-visible {
+    outline-color: Highlight;
+  }
+  progress {
+    appearance: auto;
+  }
 }
