@@ -1,3 +1,4 @@
+import { cartographyId } from "../lib/cartography-record.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { MockAgent, getGlobalDispatcher, setGlobalDispatcher } from "undici";
@@ -87,6 +88,16 @@ test("Blob SDK round trip preserves signed images and recomputes report physics"
       name: "Round trip",
       images: { orbital: image, surface: image },
     });
+    report.sites = [
+      {
+        id: "site-1",
+        name: "Quiet basin",
+        latitude: 23,
+        longitude: 45,
+        modelId: cartographyId(report.cartography),
+      },
+    ];
+    report.selectedLocation = { latitude: 23, longitude: 45 };
     report.physics.score = -1;
     const id = await storeReport(report),
       restored = await readReport(id);
@@ -94,6 +105,9 @@ test("Blob SDK round trip preserves signed images and recomputes report physics"
     assert.equal(restored.name, "Round trip");
     assert.equal(restored.physics.score, 100);
     assert.deepEqual(restored.images, report.images);
+    assert.deepEqual(restored.cartography, report.cartography);
+    assert.deepEqual(restored.sites, report.sites);
+    assert.deepEqual(restored.selectedLocation, report.selectedLocation);
     assert.deepEqual(restored.params, report.params);
     assert.deepEqual(restored.narrative, report.narrative);
     await assert.rejects(

@@ -2473,3 +2473,61 @@ dialog.lightbox img {
     padding: 14px;
   }
 }
+
+.cartography-sites {
+  border-block: 1px solid var(--gold-rule);
+  padding: 16px 0;
+  margin: 16px 0;
+}
+.cartography-sites h3 {
+  font-size: 14px;
+  font-weight: 400;
+  margin-bottom: 12px;
+}
+.cartography-sites label {
+  display: block;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.cartography-sites input,
+.cartography-sites select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--gold-rule);
+  padding: 8px;
+  font: inherit;
+}
+.cartography-sites-form {
+  display: flex;
+  gap: 8px;
+  align-items: end;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.cartography-sites-form label {
+  flex: 1;
+  min-width: 140px;
+}
+.cartography-sites-form button {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--gold-rule);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.cartography-sites-form button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.site-status {
+  font-size: 12px;
+  line-height: 1.8;
+  margin-top: 10px;
+}

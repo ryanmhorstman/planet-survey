@@ -180,6 +180,53 @@ try {
     await page.locator('[name="longitude"]').fill("45");
     await page.getByRole("button", { name: "Inspect location" }).click();
     const facts = await page.locator(".cartography-facts").textContent();
+    await page.locator('[name="siteName"]').fill("Basin camp");
+    await page.getByRole("button", { name: "Save site", exact: true }).click();
+    const firstSite = await page.locator(".saved-sites-select").inputValue();
+    await page.locator('[name="siteName"]').fill("Basin outlook");
+    await page.getByRole("button", { name: "Rename site" }).click();
+    await page.locator('[name="latitude"]').fill("-12");
+    await page.locator('[name="longitude"]').fill("-90");
+    await page.getByRole("button", { name: "Inspect location" }).click();
+    await page.locator('[name="siteName"]').fill("Ridge station");
+    await page.getByRole("button", { name: "Save site", exact: true }).click();
+    if (!fallback)
+      await page.getByRole("button", { name: "Reset view" }).click();
+    await page.locator(".saved-sites-select").selectOption(firstSite);
+    if (!fallback) {
+      await page.evaluate(
+        () =>
+          new Promise((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(resolve)),
+          ),
+      );
+      const png = (
+        await page.locator(".cartography-stage canvas").last().screenshot()
+      ).toString("base64");
+      const pixel = await page.evaluate(async (png) => {
+        const image = new Image();
+        const loaded = new Promise((resolve) => (image.onload = resolve));
+        image.src = "data:image/png;base64," + png;
+        await loaded;
+        const canvas = document.createElement("canvas");
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const context = canvas.getContext("2d");
+        context.drawImage(image, 0, 0);
+        return [
+          ...context.getImageData(Math.floor(image.width / 2), 2, 1, 1).data,
+        ];
+      }, png);
+      assert.deepEqual(
+        pixel,
+        [9, 13, 16, 255],
+        "Revisiting a site changed orbital zoom and clipped the globe",
+      );
+    }
+
+    assert.equal(await page.locator(".cartography-facts").textContent(), facts);
+    assert.equal(await page.locator(".saved-sites-select option").count(), 3);
+
     await a11y(page, `cartography-${fallback ? "fallback" : "globe"}`);
     await noOverflow(page);
     await page.screenshot({
@@ -250,6 +297,7 @@ try {
     );
     assert.equal(await page.locator(".cartography-facts").textContent(), facts);
     assert.equal(paid, 0);
+    await page.evaluate(() => sessionStorage.clear());
     await page.reload();
     await page.locator("#tabCartography").click();
     await page.waitForFunction(() =>
@@ -258,6 +306,95 @@ try {
         ?.textContent.includes("23.00°"),
     );
     assert.equal(await page.locator(".cartography-facts").textContent(), facts);
+    assert.equal(await page.locator(".saved-sites-select option").count(), 3);
+    await page.locator(".saved-sites-select").selectOption(firstSite);
+    assert.equal(
+      await page.locator('[name="siteName"]').inputValue(),
+      "Basin outlook",
+    );
+    const downloaded = page.waitForEvent("download");
+    await page.locator("#exportBtn").click();
+    const exported = JSON.parse(
+      await readFile(await (await downloaded).path(), "utf8"),
+    );
+    assert.equal(exported.sites.length, 2);
+    assert.equal(exported.cartography.version, "cartography-1");
+    const importedContext = await context({}, true),
+      imported = await importedContext.newPage();
+    await imported.goto(origin);
+    await imported.locator("#importReport").setInputFiles({
+      name: "saved-world.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(exported)),
+    });
+    await imported.locator("#tabCartography").click();
+    await imported.waitForFunction(() =>
+      document
+        .querySelector(".cartography-selection")
+        ?.textContent.includes("23.00°"),
+    );
+    assert.equal(
+      await imported.locator(".saved-sites-select option").count(),
+      3,
+    );
+    assert.equal(
+      await imported.locator(".cartography-facts").textContent(),
+      facts,
+    );
+    const replacement = structuredClone(exported);
+    replacement.sites[0].name = "Replacement basin";
+    await imported.locator("#importReport").setInputFiles({
+      name: "saved-world.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(replacement)),
+    });
+    await imported.waitForFunction(() =>
+      [...document.querySelectorAll(".saved-sites-select option")].some(
+        (option) => option.textContent.includes("Replacement basin"),
+      ),
+    );
+    await imported.locator(".saved-sites-select").selectOption(firstSite);
+    assert.equal(
+      await imported.locator('[name="siteName"]').inputValue(),
+      "Replacement basin",
+    );
+    await importedContext.close();
+    let published;
+    await ctx.route("**/api/reports", (route) => {
+      published = route.request().postDataJSON();
+      return route.fulfill({ json: { id } });
+    });
+    await page.locator("#shareBtn").click();
+    await page.locator("#publishShare").click();
+    await page.waitForFunction(
+      () => !document.querySelector("#shareURL").hidden,
+    );
+    assert.equal(published.sites.length, 2);
+    await page.keyboard.press("Escape");
+    const sharedContext = await context({}, true),
+      shared = await sharedContext.newPage();
+    await sharedContext.route("**/api/reports?*", (route) =>
+      route.fulfill({ json: { report: published } }),
+    );
+    await shared.goto(origin + "/?report=" + id);
+    await shared.locator("#tabCartography").click();
+    await shared.waitForFunction(() =>
+      document
+        .querySelector(".cartography-selection")
+        ?.textContent.includes("23.00°"),
+    );
+    assert.equal(
+      await shared.locator(".cartography-facts").textContent(),
+      facts,
+    );
+    assert.equal(await shared.locator(".saved-sites-select option").count(), 3);
+    await sharedContext.close();
+    await page.locator(".saved-sites-select").selectOption(firstSite);
+    await page.getByRole("button", { name: "Remove site" }).click();
+    assert.equal(await page.locator(".saved-sites-select option").count(), 2);
+    results.push(
+      "Named sites: save, rename, revisit, durable selection without session storage, file export/import, public snapshot and removal passed",
+    );
     const launchCapabilities = page.waitForResponse((response) =>
       response.url().endsWith("/api/capabilities"),
     );

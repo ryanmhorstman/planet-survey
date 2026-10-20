@@ -293,7 +293,7 @@ function addFact(label, text) {
   $("sourceFacts").append(dt, dd);
 }
 let cartographyController = null;
-let cartographyReportId = null;
+let cartographyReport = null;
 let cartographyEpoch = 0;
 function syncInstrument() {
   const cartography = state.instrument === "cartography",
@@ -310,24 +310,34 @@ function syncInstrument() {
     $(id).setAttribute("aria-selected", String(selected));
     $(id).tabIndex = selected ? 0 : -1;
   }
-  if (!cartography || !r || cartographyReportId !== r.id) {
+  if (!cartography || !r || cartographyReport !== r) {
     cartographyEpoch++;
     cartographyController?.dispose();
     cartographyController = null;
-    cartographyReportId = null;
+    cartographyReport = null;
   }
-  if (!cartography || !r || cartographyReportId === r.id) return;
-  cartographyReportId = r.id;
+  if (!cartography || !r || cartographyReport === r) return;
+  cartographyReport = r;
   const epoch = ++cartographyEpoch;
   $("cartographyMount").textContent = "Loading cartography instrument…";
   import("./lib/globe.js")
     .then(({ mountCartography }) => {
       if (epoch !== cartographyEpoch) return;
-      cartographyController = mountCartography($("cartographyMount"), r);
+      cartographyController = mountCartography($("cartographyMount"), r, {
+        onChange() {
+          r.publicId = null;
+          r.sample = false;
+          if (active()?.id === r.id)
+            history.replaceState(null, "", location.pathname);
+          persist();
+          if (active()?.id === r.id) render();
+          else renderHistory();
+        },
+      });
     })
     .catch(() => {
       if (epoch !== cartographyEpoch) return;
-      cartographyReportId = null;
+      cartographyReport = null;
       $("cartographyMount").textContent =
         "Cartography could not load. Switch tabs and retry. Existing illustrations and reports remain available.";
     });
@@ -844,7 +854,7 @@ function openShare() {
   $("publishShare").hidden = false;
   $("publishShare").disabled = false;
   $("shareExplanation").textContent =
-    "Create a public link containing this report and its available images. Anyone with the link can view it. Images added later require a new link.";
+    "Create a public link containing this report and its available images. Anyone with the link can view it. Saved sites and selected coordinates are included. Later changes require a new link.";
   if (sharingReport.sample)
     showShareURL(location.origin + location.pathname + "?sample=boreal");
   else if (sharingReport.publicId)

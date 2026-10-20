@@ -70,6 +70,8 @@ http
           "app.js",
           "lib/planet.js",
           "lib/client-report.js",
+          "lib/cartography-record.js",
+          "lib/water-phase.js",
           "lib/geography.js",
           "lib/geography-worker.js",
           "lib/globe.js",
