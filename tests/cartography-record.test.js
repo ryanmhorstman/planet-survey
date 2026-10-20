@@ -143,14 +143,14 @@ test("sites are bounded, canonicalized and tied to their planetary model", () =>
 test("v3 reports require identities and migrate v2 without dropping new fields", () => {
   const r = make(),
     payload = serializeReport(r);
-  assert.equal(payload.version, 3);
+  assert.equal(payload.version, 4);
   const missing = { ...payload };
   delete missing.cartography;
   assert.throws(() => restoreReport(missing), /missing.*identity/);
   assert.throws(() => validateStoredReport(missing), /missing.*identity/);
   r.sites = [siteFor(r)];
   const v2 = { ...serializeReport(r), version: 2 };
-  assert.equal(restoreReport(v2).version, 3);
+  assert.equal(restoreReport(v2).version, 4);
   assert.deepEqual(restoreReport(v2).sites, r.sites);
   assert.deepEqual(validateStoredReport(v2).sites, r.sites);
 });

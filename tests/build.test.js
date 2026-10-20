@@ -17,6 +17,7 @@ test("production build emits absolute social metadata and only public files", as
     assert.deepEqual((await readdir(join(dir, "lib"))).sort(), [
       "cartography-record.js",
       "client-report.js",
+      "expedition-record.js",
       "geography-worker.js",
       "geography.js",
       "globe.js",

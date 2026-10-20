@@ -1,3 +1,4 @@
+import { expeditionMetadata } from "../lib/expedition-record.js";
 import { cartographyId } from "../lib/cartography-record.js";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -5,6 +6,8 @@ import { MockAgent, getGlobalDispatcher, setGlobalDispatcher } from "undici";
 import { readFile } from "node:fs/promises";
 import {
   storeImage,
+  storeExpeditionImage,
+  verifiedExpeditionAsset,
   verifiedAsset,
   storeReport,
   readReport,
@@ -98,6 +101,29 @@ test("Blob SDK round trip preserves signed images and recomputes report physics"
       },
     ];
     report.selectedLocation = { latitude: 23, longitude: 45 };
+    const metadata = expeditionMetadata(
+      report.cartography,
+      report.params,
+      { latitude: 23, longitude: 45 },
+      90,
+    );
+    const expeditionImage = await storeExpeditionImage(
+      (
+        await readFile(
+          new URL("../assets/sample-orbital.webp", import.meta.url),
+        )
+      ).toString("base64"),
+      metadata.key,
+    );
+    report.expeditions = [{ ...metadata, asset: expeditionImage }];
+    assert.deepEqual(
+      verifiedExpeditionAsset(expeditionImage, metadata.key),
+      expeditionImage,
+    );
+    assert.throws(
+      () => verifiedExpeditionAsset(expeditionImage, metadata.key + "other"),
+      /does not belong/,
+    );
     report.physics.score = -1;
     const id = await storeReport(report),
       restored = await readReport(id);
@@ -106,6 +132,7 @@ test("Blob SDK round trip preserves signed images and recomputes report physics"
     assert.equal(restored.physics.score, 100);
     assert.deepEqual(restored.images, report.images);
     assert.deepEqual(restored.cartography, report.cartography);
+    assert.deepEqual(restored.expeditions, report.expeditions);
     assert.deepEqual(restored.sites, report.sites);
     assert.deepEqual(restored.selectedLocation, report.selectedLocation);
     assert.deepEqual(restored.params, report.params);

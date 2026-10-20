@@ -42,6 +42,7 @@ export async function build(output = resolve(root, "dist"), env = process.env) {
     "lib/planet.js",
     "lib/client-report.js",
     "lib/cartography-record.js",
+    "lib/expedition-record.js",
     "lib/water-phase.js",
     "lib/geography.js",
     "lib/geography-worker.js",

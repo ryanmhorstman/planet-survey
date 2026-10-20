@@ -1,3 +1,4 @@
+import { expeditionMetadata } from "../lib/expedition-record.js";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
@@ -239,6 +240,22 @@ try {
         { width: 844, height: 390 },
       ]) {
         await page.setViewportSize(viewport);
+        const smallControls = await page
+          .locator("#cartographyPanel input, #cartographyPanel select")
+          .evaluateAll((controls) =>
+            controls
+              .filter(
+                (control) =>
+                  parseFloat(getComputedStyle(control).fontSize) < 16,
+              )
+              .map((control) => control.name || control.className),
+          );
+        assert.deepEqual(
+          smallControls,
+          [],
+          "Mobile form controls trigger Safari focus zoom",
+        );
+        await page.locator('[name="latitude"]').focus();
         await noOverflow(page);
         await a11y(page, `cartography-${viewport.width}`);
         await page.screenshot({
@@ -421,6 +438,222 @@ try {
     await ctx.close();
     results.push(
       `Cartography ${fallback ? "2D fallback" : "3D globe"}: lazy loading, keyboard tabs, deterministic selection, refresh, isolation and no paid requests passed`,
+    );
+  }
+  // Explicit coordinate-based expeditions: race isolation, retries and durable caching.
+  {
+    const ctx = await context({ viewport: { width: 390, height: 844 } }, true),
+      page = await ctx.newPage();
+    let imageCalls = 0,
+      noteCalls = 0,
+      releaseImage,
+      requested,
+      badImage = true;
+    await ctx.route("**/api/expedition", async (route) => {
+      const input = route.request().postDataJSON();
+      const metadata = expeditionMetadata(
+        input.cartography,
+        input.params,
+        input,
+        input.heading,
+      );
+      if (input.operation === "image") {
+        imageCalls++;
+        requested = metadata;
+        await new Promise((resolve) => {
+          releaseImage = resolve;
+        });
+        return route.fulfill({
+          json: {
+            metadata,
+            asset: { ...surface, expeditionSignature: "b".repeat(64) },
+          },
+        });
+      }
+      noteCalls++;
+      if (noteCalls === 1)
+        return route.fulfill({
+          status: 503,
+          json: { error: "Temporary expedition notes failure" },
+        });
+      return route.fulfill({ json: { metadata, narrative } });
+    });
+    await ctx.route("https://*.public.blob.vercel-storage.com/**", (route) =>
+      route.fulfill({
+        contentType: "image/webp",
+        body: badImage ? Buffer.from("broken") : image,
+        headers: { "Access-Control-Allow-Origin": "*" },
+      }),
+    );
+    await page.goto(origin + "/?sample=boreal");
+    await page.locator("#tabCartography").click();
+    await page.waitForFunction(() =>
+      document
+        .querySelector(".cartography-selection")
+        ?.textContent.includes("cartography-1"),
+    );
+    assert.equal(imageCalls + noteCalls, 0);
+    await page.locator('[name="latitude"]').fill("23");
+    await page.locator('[name="longitude"]').fill("45");
+    await page.getByRole("button", { name: "Inspect location" }).click();
+    await page.locator('[name="expeditionHeading"]').fill("90");
+    await page.locator('[name="siteName"]').fill("Expedition camp");
+    await page.getByRole("button", { name: "Save site", exact: true }).click();
+    const expeditionSite = await page
+      .locator(".saved-sites-select")
+      .inputValue();
+
+    await page.locator("[data-expedition=image]").evaluate((button) => {
+      button.click();
+      button.click();
+    });
+    await waitFor(() => !!releaseImage, "Expedition image did not start");
+    assert.equal(imageCalls, 1);
+    await page.locator('[name="latitude"]').fill("-12");
+    await page.locator('[name="longitude"]').fill("-90");
+    await page.getByRole("button", { name: "Inspect location" }).click();
+    releaseImage();
+    await page.waitForFunction(
+      () =>
+        JSON.parse(localStorage.getItem("psu7-reports-v2")).reports[0]
+          .expeditions.length === 1,
+    );
+    assert.ok(
+      await page.locator(".expedition-open").isHidden(),
+      "Late image appeared at another coordinate",
+    );
+    await page.locator(".saved-sites-select").selectOption(expeditionSite);
+    await page.locator(".expedition-reload").waitFor();
+    badImage = false;
+    await page.locator(".expedition-reload").click();
+    await page.locator(".expedition-open").waitFor();
+    await page.waitForFunction(
+      () => document.querySelector(".expedition-image").naturalWidth > 0,
+    );
+    assert.equal(imageCalls, 1, "Reload purchased another image");
+    assert.equal(
+      await page.locator('[name="expeditionHeading"]').inputValue(),
+      "90",
+    );
+    await page.locator("[data-expedition=notes]").click();
+    await page.waitForFunction(() =>
+      document
+        .querySelector("[data-expedition=notes]")
+        .textContent.includes("Retry"),
+    );
+    await page.locator("[data-expedition=notes]").click();
+    await page.waitForFunction(
+      () => document.querySelector(".expedition-notes").textContent.length > 0,
+    );
+    assert.equal(noteCalls, 2);
+    assert.equal(
+      await page.locator(".expedition-notes").textContent(),
+      narrative.description,
+    );
+    await page.locator(".expedition-open").click();
+    assert.match(
+      await page.locator("#lightboxTitle").textContent(),
+      /expedition 23/,
+    );
+    const download = page.waitForEvent("download");
+    await page.locator("#lightboxDownload").click();
+    assert.match((await download).suggestedFilename(), /expedition-23-45-90/);
+    await page.keyboard.press("Escape");
+    assert.equal(
+      await page.evaluate(() => document.activeElement.className),
+      "expedition-open",
+    );
+    await a11y(page, "surface-expedition-mobile");
+    await noOverflow(page);
+    await page.screenshot({
+      path: "test-results/surface-expedition-mobile.png",
+      fullPage: true,
+    });
+    let published;
+    await ctx.route("**/api/reports", (route) => {
+      published = route.request().postDataJSON();
+      return route.fulfill({ json: { id } });
+    });
+    await page.locator("#shareBtn").click();
+    await page.locator("#publishShare").click();
+    await page.locator("#shareURL").waitFor();
+    await page.keyboard.press("Escape");
+    assert.equal(published.expeditions.length, 1);
+    const sharedCtx = await context({}, true),
+      shared = await sharedCtx.newPage();
+    await sharedCtx.route("**/api/reports?*", (route) =>
+      route.fulfill({ json: { report: published } }),
+    );
+    await shared.goto(origin + "/?report=" + id);
+    await shared.locator("#tabCartography").click();
+    await shared.waitForFunction(() =>
+      document
+        .querySelector(".cartography-selection")
+        ?.textContent.includes("cartography-1"),
+    );
+    await shared.locator(".expedition-history").selectOption(requested.key);
+    await shared.locator(".expedition-open").waitFor();
+    assert.equal(
+      await shared.locator(".expedition-notes").textContent(),
+      narrative.description,
+    );
+    await sharedCtx.close();
+    const exportedDownload = page.waitForEvent("download");
+    await page.locator("#exportBtn").click();
+    const exported = JSON.parse(
+      await readFile(await (await exportedDownload).path(), "utf8"),
+    );
+    assert.equal(exported.version, 4);
+    assert.equal(exported.expeditions[0].heading, 90);
+    const importedCtx = await context({}, true),
+      imported = await importedCtx.newPage();
+    let importedCalls = 0;
+    await importedCtx.route("**/api/expedition", (route) => {
+      importedCalls++;
+      return route.fulfill({
+        status: 500,
+        json: { error: "Unexpected generation" },
+      });
+    });
+    await imported.goto(origin);
+    await imported.locator("#importReport").setInputFiles({
+      name: "expedition.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(exported)),
+    });
+    await imported.locator("#tabCartography").click();
+    await imported.waitForFunction(() =>
+      document
+        .querySelector(".cartography-selection")
+        ?.textContent.includes("cartography-1"),
+    );
+    await imported.locator(".expedition-history").selectOption(requested.key);
+    await imported.locator(".expedition-open").waitFor();
+    assert.equal(
+      await imported.locator(".expedition-notes").textContent(),
+      narrative.description,
+    );
+    assert.equal(importedCalls, 0);
+    await importedCtx.close();
+
+    await page.reload();
+    await page.locator("#tabCartography").click();
+    await page.waitForFunction(() =>
+      document
+        .querySelector(".cartography-selection")
+        ?.textContent.includes("cartography-1"),
+    );
+    await page.locator(".expedition-history").selectOption(requested.key);
+    await page.locator(".expedition-open").waitFor();
+    assert.equal(
+      await page.locator(".expedition-notes").textContent(),
+      narrative.description,
+    );
+    assert.equal(imageCalls, 1);
+    assert.equal(noteCalls, 2);
+    await ctx.close();
+    results.push(
+      "Surface expeditions: explicit generation, per-location late response isolation, deduplication, decode reload without generation, notes retry, lightbox/download, sharing, export and refresh passed",
     );
   }
   for (const [width, height] of [

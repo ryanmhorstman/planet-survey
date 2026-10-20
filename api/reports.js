@@ -22,7 +22,7 @@ export default async function handler(req, res) {
         .status(405)
         .json({ error: "Method not allowed.", code: "METHOD_NOT_ALLOWED" });
     }
-    const input = body(req);
+    const input = body(req, 100000);
     validateStoredReport(input);
     release = await reserve(req, "share");
     const id = await storeReport(input);

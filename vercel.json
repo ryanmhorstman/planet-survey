@@ -17,6 +17,9 @@
     },
     "api/exoplanets.js": {
       "maxDuration": 20
+    },
+    "api/expedition.js": {
+      "maxDuration": 90
     }
   },
   "headers": [

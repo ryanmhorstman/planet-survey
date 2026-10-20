@@ -1,4 +1,8 @@
 import {
+  validateExpeditions,
+  MAX_EXPEDITIONS,
+} from "./lib/expedition-record.js";
+import {
   DEFAULTS,
   STARS,
   ZONES,
@@ -324,6 +328,26 @@ function syncInstrument() {
     .then(({ mountCartography }) => {
       if (epoch !== cartographyEpoch) return;
       cartographyController = mountCartography($("cartographyMount"), r, {
+        getExpeditionState(metadata, operation) {
+          const kind = `expedition:${operation}:${metadata.key}`,
+            rt = runtime(r);
+          return {
+            pending: rt[kind] === "pending",
+            error: rt.errors[kind],
+            available:
+              state.capabilities[operation === "image" ? "images" : "analysis"],
+          };
+        },
+        onExpedition(metadata, operation) {
+          return requestExpedition(r, metadata, operation);
+        },
+        onExpand(asset, metadata) {
+          showExpandedImage(
+            asset,
+            `${r.name} · expedition ${metadata.latitude}°, ${metadata.longitude}° · heading ${metadata.heading}°`,
+            `${r.name.replace(/[^a-z0-9]/gi, "-")}-expedition-${metadata.latitude}-${metadata.longitude}-${metadata.heading}.webp`,
+          );
+        },
         onChange() {
           r.publicId = null;
           r.sample = false;
@@ -535,6 +559,7 @@ function render() {
     : rt.errors[state.view]
       ? "Retry this view"
       : "Render this view";
+  cartographyController?.refreshExpeditions();
 }
 function selectReport(report, { scroll = true, controls = true } = {}) {
   state.activeId = report.id;
@@ -565,7 +590,7 @@ async function runTask(r, kind, job) {
       rt[kind] = "complete";
       if (active()?.id === r.id)
         announce(
-          `${kind === "analysis" ? "Interpretation" : kind + " image"} ready for ${r.name}.`,
+          `${kind.startsWith("expedition:") ? "Expedition" : kind === "analysis" ? "Interpretation" : kind + " image"} ready for ${r.name}.`,
         );
     } catch (error) {
       rt[kind] = "error";
@@ -586,6 +611,62 @@ async function runTask(r, kind, job) {
   })();
   state.tasks.set(key, task);
   return task;
+}
+function requestExpedition(r, metadata, operation) {
+  const kind = `expedition:${operation}:${metadata.key}`,
+    key = `${r.id}:${kind}`;
+  if (state.tasks.has(key)) return state.tasks.get(key);
+  const field = operation === "image" ? "asset" : "narrative";
+  if (r.expeditions.find((entry) => entry.key === metadata.key)?.[field])
+    return Promise.resolve();
+  const rt = runtime(r);
+  rt.expeditionPending ||= new Map();
+  const identities = new Set([
+    ...r.expeditions.map((entry) => entry.key),
+    ...rt.expeditionPending.keys(),
+  ]);
+  if (!identities.has(metadata.key) && identities.size >= MAX_EXPEDITIONS)
+    return Promise.reject(
+      new Error(
+        `This report already has ${MAX_EXPEDITIONS} expeditions. Export a copy before starting another report.`,
+      ),
+    );
+  rt.expeditionPending.set(
+    metadata.key,
+    (rt.expeditionPending.get(metadata.key) || 0) + 1,
+  );
+  return runTask(r, kind, async () => {
+    const data = await post(
+      "/api/expedition",
+      {
+        ...reportBody(r),
+        cartography: r.cartography,
+        latitude: metadata.latitude,
+        longitude: metadata.longitude,
+        heading: metadata.heading,
+        operation,
+      },
+      operation === "image" ? 85000 : 38000,
+    );
+    if (
+      !data[field] ||
+      JSON.stringify(data.metadata) !== JSON.stringify(metadata)
+    )
+      throw new Error(
+        "The expedition response does not match the selected world and camera.",
+      );
+    const previous = r.expeditions.find((entry) => entry.key === metadata.key);
+    const merged = { ...metadata, ...previous, [field]: data[field] };
+    const entries = [
+      ...r.expeditions.filter((entry) => entry.key !== metadata.key),
+      merged,
+    ];
+    r.expeditions = validateExpeditions(entries, r.cartography, r.params);
+  }).finally(() => {
+    const count = rt.expeditionPending.get(metadata.key) - 1;
+    if (count) rt.expeditionPending.set(metadata.key, count);
+    else rt.expeditionPending.delete(metadata.key);
+  });
 }
 function requestNarrative(r) {
   return runTask(r, "analysis", async () => {
@@ -728,15 +809,23 @@ document.querySelectorAll("dialog").forEach((dialog) =>
     }
   }),
 );
+let expandedImage = null;
+function showExpandedImage(asset, title, filename) {
+  expandedImage = { asset, filename };
+  $("lightboxImg").src = asset.url;
+  $("lightboxImg").alt = title + " · imagined artist interpretation";
+  $("lightboxTitle").textContent = title;
+  openDialog("lightbox");
+}
 $("imageOpen").addEventListener("click", () => {
   const r = active(),
     asset = r?.images[state.view];
   if (!asset) return;
-  $("lightboxImg").src = asset.url;
-  $("lightboxImg").alt = $("planetImage").alt;
-  $("lightboxTitle").textContent =
-    `${r.name} · ${state.view === "surface" ? visualSpec(r.params, r.physics).view : "Orbital"}`;
-  openDialog("lightbox");
+  showExpandedImage(
+    asset,
+    `${r.name} · ${state.view === "surface" ? visualSpec(r.params, r.physics).view : "Orbital"}`,
+    `${r.name.replace(/[^a-z0-9]/gi, "-")}-${state.view}.webp`,
+  );
 });
 function saveFile(blob, filename) {
   const url = URL.createObjectURL(blob),
@@ -746,24 +835,27 @@ function saveFile(blob, filename) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
-async function downloadView() {
-  const r = active(),
-    asset = r?.images[state.view];
+async function downloadAsset(asset, filename) {
   if (!asset) return;
   try {
     const response = await fetch(asset.url, {
       signal: AbortSignal.timeout(15000),
     });
     if (!response.ok) throw new Error("Download unavailable.");
-    saveFile(
-      await response.blob(),
-      `${r.name.replace(/[^a-z0-9]/gi, "-")}-${state.view}.webp`,
-    );
+    saveFile(await response.blob(), filename);
     announce("Image downloaded.");
   } catch {
     announce("The image could not be downloaded. Please try again.");
     notice("The image could not be downloaded. Please try again.");
   }
+}
+function downloadView() {
+  const r = active();
+  if (r)
+    return downloadAsset(
+      r.images[state.view],
+      `${r.name.replace(/[^a-z0-9]/gi, "-")}-${state.view}.webp`,
+    );
 }
 function exportReport() {
   const r = active();
@@ -967,7 +1059,11 @@ $("analysisRetry").addEventListener("click", () => {
   if (active()) void requestNarrative(active());
 });
 $("downloadBtn").addEventListener("click", downloadView);
-$("lightboxDownload").addEventListener("click", downloadView);
+$("lightboxDownload").addEventListener(
+  "click",
+  () =>
+    expandedImage && downloadAsset(expandedImage.asset, expandedImage.filename),
+);
 $("exportBtn").addEventListener("click", exportReport);
 $("shareExport").addEventListener("click", exportReport);
 $("shareBtn").addEventListener("click", openShare);

@@ -2531,3 +2531,83 @@ dialog.lightbox img {
   line-height: 1.8;
   margin-top: 10px;
 }
+
+/* iOS Safari zooms focused form controls below 16px. Keep browser zoom enabled. */
+@media (max-width: 960px), (pointer: coarse) {
+  :root :is(input, select, textarea) {
+    font-size: 16px;
+  }
+}
+
+.expedition-panel {
+  border-top: 1px solid var(--gold-rule);
+  padding-top: 16px;
+  margin-top: 16px;
+}
+.expedition-panel h3 {
+  font-size: 14px;
+  font-weight: 400;
+  margin-bottom: 12px;
+}
+.expedition-panel p {
+  font-size: 12px;
+  line-height: 1.8;
+  margin: 12px 0;
+}
+.expedition-panel label {
+  display: block;
+  font-size: 12px;
+  line-height: 1.8;
+  margin: 12px 0;
+}
+.expedition-panel input,
+.expedition-panel select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--gold-rule);
+  font: inherit;
+}
+.expedition-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.expedition-actions button,
+.expedition-reload {
+  min-height: 44px;
+  padding: 8px 12px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--gold-rule);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.expedition-actions button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.expedition-open {
+  padding: 0;
+  width: 100%;
+  border: 1px solid var(--gold-rule);
+  background: #090d10;
+  cursor: zoom-in;
+}
+.expedition-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3/2;
+  object-fit: contain;
+}
+@media (max-width: 960px), (pointer: coarse) {
+  :root .expedition-panel :is(input, select) {
+    font-size: 16px;
+  }
+}

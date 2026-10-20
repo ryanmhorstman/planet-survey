@@ -13,6 +13,7 @@ for (const name of [
   "exoplanets",
   "reports",
   "capabilities",
+  "expedition",
 ])
   handlers[`/api/${name}`] = (await import(`../api/${name}.js`)).default;
 const types = {
@@ -46,7 +47,7 @@ http
           chunks = [];
         for await (const chunk of req) {
           bytes += chunk.length;
-          if (bytes > 24000)
+          if (bytes > (url.pathname === "/api/reports" ? 100000 : 24000))
             return res.status(413).json({ error: "Request is too large." });
           chunks.push(chunk);
         }
@@ -71,6 +72,7 @@ http
           "lib/planet.js",
           "lib/client-report.js",
           "lib/cartography-record.js",
+          "lib/expedition-record.js",
           "lib/water-phase.js",
           "lib/geography.js",
           "lib/geography-worker.js",
