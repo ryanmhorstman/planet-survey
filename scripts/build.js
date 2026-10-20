@@ -48,6 +48,7 @@ export async function build(output = resolve(root, "dist"), env = process.env) {
     "lib/geography-worker.js",
     "lib/globe.js",
     "lib/terrain.js",
+    "lib/region.js",
   ]) {
     await mkdir(resolve(output, file, ".."), { recursive: true });
     await cp(resolve(root, file), resolve(output, file), { recursive: true });

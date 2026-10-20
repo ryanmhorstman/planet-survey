@@ -161,10 +161,10 @@ try {
     );
     await page.locator("#tabIllustration").focus();
     await page.keyboard.press("ArrowRight");
-    await page.waitForFunction(() =>
-      document
-        .querySelector(".cartography-selection")
-        ?.textContent.includes("cartography-1"),
+    await page.waitForFunction(
+      () =>
+        document.querySelector(".cartography-stage")?.dataset.geography ===
+        "cartography-2",
     );
     await page.waitForFunction(() =>
       /3D model globe|3D graphics unavailable/.test(
@@ -177,6 +177,7 @@ try {
         /3D model globe/,
         "WebGL prototype did not initialize",
       );
+    await page.locator(".cartography-options").evaluate((e) => (e.open = true));
     await page.locator('[name="latitude"]').fill("23");
     await page.locator('[name="longitude"]').fill("45");
     await page.getByRole("button", { name: "Inspect location" }).click();
@@ -186,6 +187,7 @@ try {
     const firstSite = await page.locator(".saved-sites-select").inputValue();
     await page.locator('[name="siteName"]').fill("Basin outlook");
     await page.getByRole("button", { name: "Rename site" }).click();
+    await page.locator(".cartography-options").evaluate((e) => (e.open = true));
     await page.locator('[name="latitude"]').fill("-12");
     await page.locator('[name="longitude"]').fill("-90");
     await page.getByRole("button", { name: "Inspect location" }).click();
@@ -193,6 +195,7 @@ try {
     await page.getByRole("button", { name: "Save site", exact: true }).click();
     if (!fallback)
       await page.getByRole("button", { name: "Reset view" }).click();
+    await page.locator(".cartography-options").evaluate((e) => (e.open = true));
     await page.locator(".saved-sites-select").selectOption(firstSite);
     if (!fallback) {
       await page.evaluate(
@@ -293,6 +296,9 @@ try {
         ) < 1,
       );
       // Restore the exact saved coordinate after testing raycast picking.
+      await page
+        .locator(".cartography-options")
+        .evaluate((e) => (e.open = true));
       await page.locator('[name="latitude"]').fill("23");
       await page.locator('[name="longitude"]').fill("45");
       await page.getByRole("button", { name: "Inspect location" }).click();
@@ -307,6 +313,11 @@ try {
       assert.equal(
         await page.locator(".cartography-facts").textContent(),
         facts,
+      );
+      await page.waitForFunction(
+        () =>
+          document.querySelector(".cartography-stage").dataset.detail ===
+          "ready",
       );
       await page.getByRole("button", { name: "Zoom in", exact: true }).click();
       await page.getByRole("button", { name: "Rotate globe north" }).click();
@@ -361,6 +372,9 @@ try {
         .click();
       await delay(800);
       await page.emulateMedia({ reducedMotion: "reduce" });
+      await page
+        .locator(".cartography-options")
+        .evaluate((e) => (e.open = true));
       await page.locator('[name="latitude"]').fill("23");
       await page.locator('[name="longitude"]').fill("45");
       await page.getByRole("button", { name: "Inspect location" }).click();
@@ -395,6 +409,7 @@ try {
     );
     assert.equal(await page.locator(".cartography-facts").textContent(), facts);
     assert.equal(await page.locator(".saved-sites-select option").count(), 3);
+    await page.locator(".cartography-options").evaluate((e) => (e.open = true));
     await page.locator(".saved-sites-select").selectOption(firstSite);
     assert.equal(
       await page.locator('[name="siteName"]').inputValue(),
@@ -406,7 +421,7 @@ try {
       await readFile(await (await downloaded).path(), "utf8"),
     );
     assert.equal(exported.sites.length, 2);
-    assert.equal(exported.cartography.version, "cartography-1");
+    assert.equal(exported.cartography.version, "cartography-2");
     const importedContext = await context({}, true),
       imported = await importedContext.newPage();
     await imported.goto(origin);
@@ -441,6 +456,9 @@ try {
         (option) => option.textContent.includes("Replacement basin"),
       ),
     );
+    await imported
+      .locator(".cartography-options")
+      .evaluate((e) => (e.open = true));
     await imported.locator(".saved-sites-select").selectOption(firstSite);
     assert.equal(
       await imported.locator('[name="siteName"]').inputValue(),
@@ -477,6 +495,7 @@ try {
     );
     assert.equal(await shared.locator(".saved-sites-select option").count(), 3);
     await sharedContext.close();
+    await page.locator(".cartography-options").evaluate((e) => (e.open = true));
     await page.locator(".saved-sites-select").selectOption(firstSite);
     await page.getByRole("button", { name: "Remove site" }).click();
     assert.equal(await page.locator(".saved-sites-select option").count(), 2);
@@ -493,10 +512,10 @@ try {
         .querySelector("#planetNameDisplay")
         .textContent.startsWith("PSU-"),
     );
-    await page.waitForFunction(() =>
-      document
-        .querySelector(".cartography-selection")
-        ?.textContent.includes("cartography-1"),
+    await page.waitForFunction(
+      () =>
+        document.querySelector(".cartography-stage")?.dataset.geography ===
+        "cartography-2",
     );
     await page.waitForFunction(
       () => !document.querySelector("#generateBtn").disabled,
@@ -510,6 +529,69 @@ try {
     results.push(
       `Cartography ${fallback ? "2D fallback" : "3D globe"}: lazy loading, keyboard tabs, deterministic selection, refresh, isolation and no paid requests passed`,
     );
+  }
+  // The outreach flow works with all technical controls closed.
+  {
+    const ctx = await context(
+        { viewport: { width: 390, height: 844 }, hasTouch: true },
+        true,
+      ),
+      page = await ctx.newPage();
+    let generated = 0;
+    await ctx.route("**/api/expedition", (route) => {
+      const input = route.request().postDataJSON();
+      assert.equal(input.operation, "image");
+      assert.equal(input.heading, 0);
+      generated++;
+      return route.fulfill({
+        json: {
+          metadata: expeditionMetadata(
+            input.cartography,
+            input.params,
+            input,
+            0,
+          ),
+          asset: { ...surface, expeditionSignature: "b".repeat(64) },
+        },
+      });
+    });
+    await page.goto(origin + "/?sample=boreal");
+    await page.locator("#tabCartography").click();
+    await page.waitForFunction(
+      () =>
+        document.querySelector(".cartography-stage")?.dataset.view === "orbit",
+    );
+    const canvas = page.locator(".cartography-stage canvas").last(),
+      box = await canvas.boundingBox();
+    await canvas.tap({ position: { x: box.width / 2, y: box.height / 2 } });
+    await page
+      .getByRole("button", { name: "Generate a view", exact: true })
+      .click();
+    await page.locator(".expedition-open").waitFor();
+    assert.equal(generated, 1);
+    assert.equal(
+      await page.locator(".cartography-options").getAttribute("open"),
+      null,
+    );
+    assert.equal(
+      await page.locator(".expedition-direction").getAttribute("open"),
+      null,
+    );
+    const saved = await page.evaluate(
+      () => JSON.parse(localStorage.getItem("psu7-reports-v2")).reports[0],
+    );
+    assert.equal(saved.sites.length, 0);
+    assert.equal(saved.expeditions[0].heading, 0);
+    await a11y(page, "simple-expedition-mobile");
+    await noOverflow(page);
+    await page.screenshot({
+      path: "test-results/simple-expedition-mobile.png",
+      fullPage: true,
+    });
+    results.push(
+      "Tap a place → Generate a view: mobile flow works without saving a site, entering coordinates or opening camera controls",
+    );
+    await ctx.close();
   }
   // Explicit coordinate-based expeditions: race isolation, retries and durable caching.
   {
@@ -558,15 +640,33 @@ try {
     );
     await page.goto(origin + "/?sample=boreal");
     await page.locator("#tabCartography").click();
-    await page.waitForFunction(() =>
-      document
-        .querySelector(".cartography-selection")
-        ?.textContent.includes("cartography-1"),
+    await page.waitForFunction(
+      () =>
+        document.querySelector(".cartography-stage")?.dataset.geography ===
+        "cartography-2",
     );
     assert.equal(imageCalls + noteCalls, 0);
+    assert.equal(
+      await page.locator(".cartography-options").getAttribute("open"),
+      null,
+    );
+    assert.equal(
+      await page.locator(".expedition-direction").getAttribute("open"),
+      null,
+    );
+    assert.ok(
+      await page
+        .getByRole("button", { name: "Generate a view", exact: true })
+        .isEnabled(),
+    );
+    assert.equal(await page.locator(".saved-sites-select option").count(), 1);
+    await page.locator(".cartography-options").evaluate((e) => (e.open = true));
     await page.locator('[name="latitude"]').fill("23");
     await page.locator('[name="longitude"]').fill("45");
     await page.getByRole("button", { name: "Inspect location" }).click();
+    await page
+      .locator(".expedition-direction")
+      .evaluate((e) => (e.open = true));
     await page.locator('[name="expeditionHeading"]').fill("90");
     await page.locator('[name="siteName"]').fill("Expedition camp");
     await page.getByRole("button", { name: "Save site", exact: true }).click();
@@ -580,6 +680,7 @@ try {
     });
     await waitFor(() => !!releaseImage, "Expedition image did not start");
     assert.equal(imageCalls, 1);
+    await page.locator(".cartography-options").evaluate((e) => (e.open = true));
     await page.locator('[name="latitude"]').fill("-12");
     await page.locator('[name="longitude"]').fill("-90");
     await page.getByRole("button", { name: "Inspect location" }).click();
@@ -593,6 +694,7 @@ try {
       await page.locator(".expedition-open").isHidden(),
       "Late image appeared at another coordinate",
     );
+    await page.locator(".cartography-options").evaluate((e) => (e.open = true));
     await page.locator(".saved-sites-select").selectOption(expeditionSite);
     await page.locator(".expedition-reload").waitFor();
     badImage = false;
@@ -657,10 +759,10 @@ try {
     );
     await shared.goto(origin + "/?report=" + id);
     await shared.locator("#tabCartography").click();
-    await shared.waitForFunction(() =>
-      document
-        .querySelector(".cartography-selection")
-        ?.textContent.includes("cartography-1"),
+    await shared.waitForFunction(
+      () =>
+        document.querySelector(".cartography-stage")?.dataset.geography ===
+        "cartography-2",
     );
     await shared.locator(".expedition-history").selectOption(requested.key);
     await shared.locator(".expedition-open").waitFor();
@@ -693,10 +795,10 @@ try {
       buffer: Buffer.from(JSON.stringify(exported)),
     });
     await imported.locator("#tabCartography").click();
-    await imported.waitForFunction(() =>
-      document
-        .querySelector(".cartography-selection")
-        ?.textContent.includes("cartography-1"),
+    await imported.waitForFunction(
+      () =>
+        document.querySelector(".cartography-stage")?.dataset.geography ===
+        "cartography-2",
     );
     await imported.locator(".expedition-history").selectOption(requested.key);
     await imported.locator(".expedition-open").waitFor();
@@ -709,10 +811,10 @@ try {
 
     await page.reload();
     await page.locator("#tabCartography").click();
-    await page.waitForFunction(() =>
-      document
-        .querySelector(".cartography-selection")
-        ?.textContent.includes("cartography-1"),
+    await page.waitForFunction(
+      () =>
+        document.querySelector(".cartography-stage")?.dataset.geography ===
+        "cartography-2",
     );
     await page.locator(".expedition-history").selectOption(requested.key);
     await page.locator(".expedition-open").waitFor();

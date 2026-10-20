@@ -4,7 +4,7 @@ import { inflateSync } from "node:zlib";
 import { DEFAULTS, createReport } from "../lib/planet.js";
 import {
   createGeography,
-  atlasPixels,
+  surfaceColor,
   samplePlanetLocation,
 } from "../lib/geography.js";
 import {
@@ -59,7 +59,6 @@ test("regional PNG repeats exactly, marks heading, and samples canonical globe p
     site = { latitude: 23, longitude: 179, heading: 90 },
     png = regionalReference(model, site),
     pixels = decode(png),
-    atlas = atlasPixels(model),
     size = REFERENCE_SIZE,
     center = (size - 1) / 2;
   assert.deepEqual(regionalReference(model, site), png);
@@ -83,12 +82,10 @@ test("regional PNG repeats exactly, marks heading, and samples canonical globe p
         ((center - y) / center) * 6,
       ),
       s = samplePlanetLocation(model, c.latitude, c.longitude),
-      [row, col] = s.cellId.split(":").map(Number),
-      source = (row * model.width + col) * 4,
       destination = y * (size * 3 + 1) + 1 + x * 3;
     assert.deepEqual(
       [...pixels.subarray(destination, destination + 3)],
-      [...atlas.subarray(source, source + 3)],
+      surfaceColor(model, s),
     );
   }
   const marker = 256 * (size * 3 + 1) + 1 + 280 * 3;

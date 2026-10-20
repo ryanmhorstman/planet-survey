@@ -131,7 +131,13 @@ test("synchronous model has repeatable longitudinal climate variation", () => {
 });
 
 test("v1 canonical atlas has a frozen known-answer fixture", () => {
-  const model = modelFor({});
+  const model = createGeography(
+    DEFAULTS,
+    calculate(DEFAULTS),
+    64,
+    undefined,
+    "cartography-1",
+  );
   assert.equal(model.id, "cartography-1-2d05364d-64");
   assert.ok(Math.abs(model.heights[0] - 0.5041544437408447) < 1e-6);
   assert.ok(Math.abs(model.seaLevel - 0.5906397700309753) < 1e-6);

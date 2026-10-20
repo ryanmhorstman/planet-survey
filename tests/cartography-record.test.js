@@ -26,11 +26,16 @@ test("legacy reports without cartographic metadata acquire the unchanged v1 iden
   delete legacy.sites;
   delete legacy.selectedLocation;
   const restored = restoreReport(legacy);
-  assert.deepEqual(restored.cartography, r.cartography);
-  assert.deepEqual(validateStoredReport(legacy).cartography, r.cartography);
+  const old = createReport({
+    params: DEFAULTS,
+    geographyVersion: "cartography-1",
+  });
+  assert.deepEqual(restored.cartography, old.cartography);
+  assert.deepEqual(validateStoredReport(legacy).cartography, old.cartography);
   assert.deepEqual(restored.sites, []);
   assert.equal(restored.selectedLocation, null);
-  assert.equal(r.cartography.seed, 0x2d05364d);
+  assert.equal(old.cartography.seed, 0x2d05364d);
+  assert.equal(r.cartography.version, "cartography-2");
 });
 test("named sites and selected coordinates survive export, import and server validation", () => {
   const r = make();
