@@ -1,3 +1,4 @@
+import { terrainDetail } from "../lib/terrain-detail.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { DEFAULTS, calculate, createReport } from "../lib/planet.js";
@@ -9,7 +10,7 @@ import {
   locationVector,
 } from "../lib/geography.js";
 import { createRegion, regionCoordinate, REGION_SIZE } from "../lib/region.js";
-import { terrainRadius } from "../lib/terrain.js";
+import { detailedTerrainRadius } from "../lib/terrain.js";
 import { restoreReport, serializeReport } from "../lib/client-report.js";
 const make = () => createGeography(DEFAULTS, calculate(DEFAULTS), 64);
 test("continuous field varies within atlas cells and has no seam or polar discontinuity", () => {
@@ -49,10 +50,10 @@ test("regional mesh/material pixels use the same location sampler, including pol
     lat = 23,
     lon = 179,
     region = createRegion(m, lat, lon),
-    center = 64 * 129 + 64;
+    center = 96 * 193 + 96;
   assert.deepEqual(region, createRegion(m, lat, lon));
   const expected = locationVector(lat, lon).map(
-    (n) => n * (terrainRadius(m, lat, lon) + 0.000025),
+    (n) => n * (detailedTerrainRadius(m, lat, lon) + 0.000025),
   );
   expected.forEach((n, i) =>
     assert.ok(Math.abs(n - region.positions[center * 3 + i]) < 1e-6),
@@ -72,7 +73,7 @@ test("regional mesh/material pixels use the same location sampler, including pol
         (y * REGION_SIZE + x) * 4 + 3,
       ),
     ],
-    surfaceColor(m, samplePlanetLocation(m, c.latitude, c.longitude)),
+    terrainDetail(m, c.latitude, c.longitude).color,
   );
   for (const lat of [-90, 90]) {
     const c = regionCoordinate(lat, 0, 12, 12);

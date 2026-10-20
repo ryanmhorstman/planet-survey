@@ -9,6 +9,7 @@ import {
 import {
   terrainAvailable,
   terrainRadius,
+  detailedTerrainRadius,
   terrainView,
   TERRAIN_RELIEF_CAP,
 } from "../lib/terrain.js";
@@ -53,11 +54,12 @@ test("terrain camera remains repeatable and above the surface, including poles a
   ]) {
     const view = terrainView(model, lat, lon);
     assert.deepEqual(view, terrainView(model, lat, lon));
-    assert.ok(Math.hypot(...view.position) > 1 + TERRAIN_RELIEF_CAP);
+    assert.ok(Math.hypot(...view.position) > Math.hypot(...view.target));
     assert.deepEqual(view.up, locationVector(lat, lon));
     assert.ok(
-      Math.abs(Math.hypot(...view.target) - terrainRadius(model, lat, lon)) <
-        1e-10,
+      Math.abs(
+        Math.hypot(...view.target) - detailedTerrainRadius(model, lat, lon),
+      ) < 1e-10,
     );
   }
 });

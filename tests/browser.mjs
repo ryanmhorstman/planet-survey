@@ -636,6 +636,81 @@ try {
       `Cartography ${fallback ? "2D fallback" : "3D globe"}: lazy loading, keyboard tabs, deterministic selection, refresh, isolation and no paid requests passed`,
     );
   }
+  // Fine terrain must refine with zoom and remain responsive in phone layouts.
+  {
+    const ctx = await context(
+        { viewport: { width: 1100, height: 900 }, hasTouch: true },
+        true,
+      ),
+      page = await ctx.newPage(),
+      world = createReport({
+        params: DEFAULTS,
+        name: "Ridge fixture",
+        selectedLocation: { latitude: -4, longitude: 158 },
+      });
+    let paid = 0;
+    const renderErrors = [];
+    page.on("request", (r) => {
+      if (/\/api\/(image|analyze|expedition)$/.test(r.url())) paid++;
+    });
+    page.on("console", (m) => {
+      if (m.type() === "error") renderErrors.push(m.text());
+    });
+    await page.addInitScript(
+      (data) => localStorage.setItem("psu7-reports-v2", JSON.stringify(data)),
+      { selected: world.id, reports: [world] },
+    );
+    await page.goto(origin);
+    await page.locator("#tabCartography").click();
+    await page.waitForFunction(
+      () =>
+        document.querySelector(".cartography-stage")?.dataset.view === "orbit",
+    );
+    await page
+      .getByRole("button", { name: "Explore terrain", exact: true })
+      .click();
+    await page.waitForFunction(
+      () =>
+        document.querySelector(".cartography-stage")?.dataset.detailSpan ===
+          "0.25" &&
+        document.querySelector(".cartography-stage").dataset.detail === "ready",
+    );
+    await page
+      .locator(".cartography-stage")
+      .screenshot({ path: "test-results/ridge-desktop.png" });
+    for (let i = 0; i < 10; i++)
+      await page.getByRole("button", { name: "Zoom in", exact: true }).click();
+    await page.waitForFunction(
+      () =>
+        document.querySelector(".cartography-stage")?.dataset.detailSpan ===
+          "0.0625" &&
+        document.querySelector(".cartography-stage").dataset.detail === "ready",
+    );
+    for (const viewport of [
+      { width: 390, height: 844 },
+      { width: 844, height: 390 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await noOverflow(page);
+      await a11y(page, `ridge-${viewport.width}`);
+      await page
+        .locator(".cartography-stage")
+        .screenshot({ path: `test-results/ridge-${viewport.width}.png` });
+    }
+    await page
+      .getByRole("button", { name: "Return to orbit", exact: true })
+      .click();
+    assert.equal(
+      await page.locator(".cartography-stage").getAttribute("data-view"),
+      "orbit",
+    );
+    assert.equal(paid, 0);
+    assert.deepEqual(renderErrors, []);
+    results.push(
+      "Fine terrain: closer camera, deterministic ridges/materials, zoom-based refinement, mobile portrait/landscape, clean WebGL rendering and no paid calls passed",
+    );
+    await ctx.close();
+  }
   // The outreach flow works with all technical controls closed.
   {
     const ctx = await context(

@@ -10,7 +10,7 @@
     "dev": "node --env-file-if-exists=.env.local scripts/dev-server.js",
     "test": "node --test tests/*.test.js",
     "test:browser": "node tests/browser.mjs",
-    "check": "node --check app.js && node --check lib/planet.js && node --check lib/server.js && node --check lib/geography.js && node --check lib/globe.js && node --check lib/geography-worker.js && node --check lib/cartography-record.js && node --check lib/water-phase.js && node --check api/expedition.js && node --check lib/expedition.js && node --check lib/expedition-record.js && node --check lib/regional-reference.js && node --check lib/terrain.js && node --check lib/region.js && node --check lib/orbital-record.js && node --check lib/orbital-reference.js && node --check lib/png.js",
+    "check": "node --check app.js && node --check lib/planet.js && node --check lib/server.js && node --check lib/geography.js && node --check lib/globe.js && node --check lib/geography-worker.js && node --check lib/cartography-record.js && node --check lib/water-phase.js && node --check api/expedition.js && node --check lib/expedition.js && node --check lib/expedition-record.js && node --check lib/regional-reference.js && node --check lib/terrain-detail.js && node --check lib/terrain.js && node --check lib/region.js && node --check lib/orbital-record.js && node --check lib/orbital-reference.js && node --check lib/png.js",
     "build": "node scripts/build.js",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
