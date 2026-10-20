@@ -140,7 +140,7 @@ try {
     let paid = 0;
     ctx.on("request", (req) => {
       fetched.push(req.url());
-      if (/\/api\/(image|analyze)$/.test(req.url())) paid++;
+      if (/\/api\/(image|analyze|expedition)$/.test(req.url())) paid++;
     });
     if (fallback)
       await page.addInitScript(() => {
@@ -296,6 +296,77 @@ try {
       await page.locator('[name="latitude"]').fill("23");
       await page.locator('[name="longitude"]').fill("45");
       await page.getByRole("button", { name: "Inspect location" }).click();
+      // Terrain is a closer view of the same world, never another paid image.
+      await page
+        .getByRole("button", { name: "Explore terrain", exact: true })
+        .click();
+      assert.equal(
+        await page.locator(".cartography-stage").getAttribute("data-view"),
+        "terrain",
+      );
+      assert.equal(
+        await page.locator(".cartography-facts").textContent(),
+        facts,
+      );
+      await page.getByRole("button", { name: "Zoom in", exact: true }).click();
+      await page.getByRole("button", { name: "Rotate globe north" }).click();
+      for (const viewport of [
+        { width: 375, height: 812 },
+        { width: 844, height: 390 },
+      ]) {
+        await page.setViewportSize(viewport);
+        await noOverflow(page);
+        await a11y(page, `terrain-${viewport.width}`);
+        await page
+          .locator(".cartography-stage")
+          .screenshot({ path: `test-results/terrain-${viewport.width}.png` });
+      }
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await page.getByRole("button", { name: "Center on site" }).click();
+      await page
+        .locator(".cartography-stage")
+        .screenshot({ path: "test-results/terrain-desktop.png" });
+      await page
+        .getByRole("button", { name: "Return to orbit", exact: true })
+        .click();
+      assert.equal(
+        await page.locator(".cartography-stage").getAttribute("data-view"),
+        "orbit",
+      );
+      // Zoom controls cross the orbital/regional boundary in both directions.
+      for (let i = 0; i < 5; i++)
+        await page
+          .getByRole("button", { name: "Zoom in", exact: true })
+          .click();
+      assert.equal(
+        await page.locator(".cartography-stage").getAttribute("data-view"),
+        "terrain",
+      );
+      for (let i = 0; i < 8; i++)
+        await page
+          .getByRole("button", { name: "Zoom out", exact: true })
+          .click();
+      assert.equal(
+        await page.locator(".cartography-stage").getAttribute("data-view"),
+        "orbit",
+      );
+      // Exercise the animated path as well as the default reduced-motion path.
+      await page.emulateMedia({ reducedMotion: "no-preference" });
+      await page
+        .getByRole("button", { name: "Explore terrain", exact: true })
+        .click();
+      await delay(800);
+      await page
+        .getByRole("button", { name: "Return to orbit", exact: true })
+        .click();
+      await delay(800);
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.locator('[name="latitude"]').fill("23");
+      await page.locator('[name="longitude"]').fill("45");
+      await page.getByRole("button", { name: "Inspect location" }).click();
+      results.push(
+        "Terrain: selected-site descent, same environmental sample, regional controls, mobile portrait/landscape, zoom boundary, return to orbit and reduced-motion/animated paths passed without paid calls",
+      );
       await page.getByRole("button", { name: "2D atlas" }).click();
       assert.equal(
         await page

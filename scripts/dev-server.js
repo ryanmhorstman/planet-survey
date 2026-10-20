@@ -77,6 +77,7 @@ http
           "lib/geography.js",
           "lib/geography-worker.js",
           "lib/globe.js",
+          "lib/terrain.js",
           "assets/vendor/three.core.js",
           "assets/vendor/three.module.js",
           "assets/vendor/OrbitControls.js",

@@ -1,9 +1,11 @@
 import {
   prepareExpedition,
   expeditionContext,
+  expeditionModel,
   expeditionImagePrompt,
   expeditionAnalysisPrompt,
 } from "../lib/expedition.js";
+import { regionalReference } from "../lib/regional-reference.js";
 import { expeditionNarrative } from "../lib/expedition-record.js";
 import {
   body,
@@ -36,25 +38,35 @@ export function createExpeditionHandler({
             : "AI field notes are unavailable. The local model note remains available.",
         );
       release = await quota(req, image ? "image" : "analyze");
-      const context = expeditionContext(prepared);
+      const model = expeditionModel(prepared);
+      const context = expeditionContext(prepared, model);
       if (image) {
+        const form = new FormData();
+        for (const [name, value] of Object.entries({
+          model: "gpt-image-1",
+          prompt: expeditionImagePrompt(prepared, context),
+          n: "1",
+          size: "1536x1024",
+          quality: "medium",
+          output_format: "webp",
+          output_compression: "80",
+        }))
+          form.set(name, value);
+        form.set(
+          "image",
+          new Blob([regionalReference(model, prepared.metadata)], {
+            type: "image/png",
+          }),
+          "region.png",
+        );
         const response = await request(
-          "https://api.openai.com/v1/images/generations",
+          "https://api.openai.com/v1/images/edits",
           {
             method: "POST",
             headers: {
-              "Content-Type": "application/json",
               Authorization: `Bearer ${key}`,
             },
-            body: JSON.stringify({
-              model: "gpt-image-1",
-              prompt: expeditionImagePrompt(prepared, context),
-              n: 1,
-              size: "1536x1024",
-              quality: "medium",
-              output_format: "webp",
-              output_compression: 80,
-            }),
+            body: form,
           },
           45000,
         );

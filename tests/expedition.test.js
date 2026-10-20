@@ -139,12 +139,24 @@ test("provider operations share existing quota scopes, release failures and bind
       },
       request: async (url, options) => {
         calls++;
-        const sent = JSON.parse(options.body);
         if (url.includes("openai")) {
-          assert.equal(sent.n, 1);
-          assert.match(sent.prompt, /Heading 90/);
+          assert.equal(url, "https://api.openai.com/v1/images/edits");
+          assert.equal(options.headers["Content-Type"], undefined);
+          assert.ok(options.body instanceof FormData);
+          assert.equal(options.body.get("n"), "1");
+          assert.equal(options.body.get("model"), "gpt-image-1");
+          assert.match(options.body.get("prompt"), /Heading 90/);
+          assert.match(
+            options.body.get("prompt"),
+            /attached image is a north-up/,
+          );
+          const image = options.body.get("image");
+          assert.equal(image.type, "image/png");
+          assert.equal(image.name, "region.png");
+          assert.ok(image.size > 100);
           return { data: [{ b64_json: "encoded" }] };
         }
+        const sent = JSON.parse(options.body);
         assert.match(sent.messages[0].content, /selected coordinate/);
         return {
           stop_reason: "end_turn",
