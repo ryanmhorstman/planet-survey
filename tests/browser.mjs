@@ -1,3 +1,4 @@
+import { orbitalView } from "../lib/orbital-record.js";
 import { expeditionMetadata } from "../lib/expedition-record.js";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -118,6 +119,111 @@ try {
     args: ["--no-sandbox"],
   });
   await mkdir("test-results", { recursive: true });
+  // New orbital images carry a reproducible reference camera; legacy images stay intact.
+  {
+    const ctx = await context({ viewport: { width: 390, height: 844 } }, true),
+      page = await ctx.newPage();
+    let calls = 0,
+      reference;
+    await ctx.route("**/api/analyze", (route) =>
+      route.fulfill({ json: { narrative } }),
+    );
+    await ctx.route("**/api/image", (route) => {
+      const input = route.request().postDataJSON();
+      assert.equal(input.view, "orbital");
+      assert.ok(input.cartography);
+      calls++;
+      reference = orbitalView(input.cartography);
+      return route.fulfill({
+        json: {
+          asset: {
+            ...orbital,
+            globeView: reference,
+            referenceSignature: "b".repeat(64),
+          },
+        },
+      });
+    });
+    await page.goto(origin + "/?sample=boreal");
+    await page.locator("#planetNameDisplay").waitFor();
+    assert.ok(await page.locator("#viewOnGlobe").isHidden());
+    await page.locator("#generateBtn").click();
+    await page.locator("#viewOnGlobe").waitFor();
+    await page.locator("#viewOnGlobe").click();
+    await page.waitForFunction(
+      () =>
+        document.querySelector(".cartography-stage")?.dataset.reference ===
+        "true",
+    );
+    assert.equal(
+      await page.locator("#tabCartography").getAttribute("aria-selected"),
+      "true",
+    );
+    assert.match(
+      await page.locator(".cartography-status").textContent(),
+      /perspective used to guide/,
+    );
+    let box = await page.locator(".cartography-stage").boundingBox();
+    assert.ok(Math.abs(box.width / box.height - 1.5) < 0.02);
+    await noOverflow(page);
+    await a11y(page, "orbital-reference-mobile");
+    await page.screenshot({
+      path: "test-results/orbital-reference-mobile.png",
+      fullPage: true,
+    });
+    const saved = await page.evaluate(
+      () => JSON.parse(localStorage.getItem("psu7-reports-v2")).reports[0],
+    );
+    assert.deepEqual(saved.images.orbital.globeView, reference);
+    await page.reload();
+    await page.locator("#viewOnGlobe").waitFor();
+    await page.locator("#viewOnGlobe").click();
+    await page.waitForFunction(
+      () =>
+        document.querySelector(".cartography-stage")?.dataset.reference ===
+        "true",
+    );
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page
+      .locator(".cartography-stage")
+      .screenshot({ path: "test-results/orbital-reference-desktop.png" });
+    box = await page.locator(".cartography-stage").boundingBox();
+    assert.ok(Math.abs(box.width / box.height - 1.5) < 0.02);
+    await page.getByRole("button", { name: "Zoom in", exact: true }).click();
+    assert.equal(
+      await page.locator(".cartography-stage").getAttribute("data-reference"),
+      null,
+    );
+    assert.doesNotMatch(
+      await page.locator(".cartography-status").textContent(),
+      /perspective used to guide/,
+    );
+    assert.equal(calls, 1, "Globe navigation or refresh regenerated the image");
+    const fallback = await ctx.newPage();
+    await fallback.addInitScript(() => {
+      const original = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (type, ...args) {
+        return type.startsWith("webgl")
+          ? null
+          : original.call(this, type, ...args);
+      };
+    });
+    await fallback.goto(origin);
+    await fallback.locator("#viewOnGlobe").waitFor();
+    await fallback.locator("#viewOnGlobe").click();
+    await fallback.waitForFunction(
+      () =>
+        document.querySelector(".cartography-stage")?.dataset.view === "atlas",
+    );
+    assert.match(
+      await fallback.locator(".cartography-status").textContent(),
+      /3D graphics unavailable/,
+    );
+    results.push(
+      "Orbital reference: pinned camera, 3:2 framing on mobile/desktop, refresh persistence, legacy image compatibility, no regeneration and 2D fallback passed",
+    );
+    await ctx.close();
+  }
   // Cartography is isolated and lazy; selection does not call paid providers.
   for (const fallback of [false, true]) {
     const ctx = await context(

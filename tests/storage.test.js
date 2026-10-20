@@ -1,3 +1,4 @@
+import { orbitalView } from "../lib/orbital-record.js";
 import { expeditionMetadata } from "../lib/expedition-record.js";
 import { cartographyId } from "../lib/cartography-record.js";
 import test from "node:test";
@@ -6,6 +7,7 @@ import { MockAgent, getGlobalDispatcher, setGlobalDispatcher } from "undici";
 import { readFile } from "node:fs/promises";
 import {
   storeImage,
+  storeOrbitalImage,
   storeExpeditionImage,
   verifiedExpeditionAsset,
   verifiedAsset,
@@ -123,6 +125,33 @@ test("Blob SDK round trip preserves signed images and recomputes report physics"
     assert.throws(
       () => verifiedExpeditionAsset(expeditionImage, metadata.key + "other"),
       /does not belong/,
+    );
+    const orbitalImage = await storeOrbitalImage(
+      (
+        await readFile(
+          new URL("../assets/sample-orbital.webp", import.meta.url),
+        )
+      ).toString("base64"),
+      orbitalView(report.cartography),
+    );
+    assert.deepEqual(verifiedAsset(orbitalImage), orbitalImage);
+    report.images.orbital = orbitalImage;
+    const otherWorld = createReport({ params: { ...DEFAULTS, water: 50 } });
+    assert.throws(
+      () =>
+        verifiedAsset({
+          ...orbitalImage,
+          globeView: orbitalView(otherWorld.cartography),
+        }),
+      /does not belong/,
+    );
+    assert.throws(
+      () =>
+        verifiedAsset({
+          ...orbitalImage,
+          globeView: { ...orbitalImage.globeView, latitude: 30 },
+        }),
+      /reference/,
     );
     report.physics.score = -1;
     const id = await storeReport(report),

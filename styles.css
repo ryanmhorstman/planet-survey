@@ -1686,7 +1686,7 @@ select:focus-visible {
   font-size: 11px;
   background: var(--surface);
 }
-.request-status:has(p:empty):has(button[hidden]) {
+.request-status:has(p:empty):not(:has(button:not([hidden]))) {
   display: none;
 }
 .request-status p {

@@ -73,6 +73,7 @@ http
           "lib/client-report.js",
           "lib/cartography-record.js",
           "lib/expedition-record.js",
+          "lib/orbital-record.js",
           "lib/water-phase.js",
           "lib/geography.js",
           "lib/geography-worker.js",

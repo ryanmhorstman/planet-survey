@@ -1,3 +1,4 @@
+import { orbitalAssetMetadata } from "./lib/orbital-record.js";
 import {
   validateExpeditions,
   MAX_EXPEDITIONS,
@@ -296,6 +297,7 @@ function addFact(label, text) {
   dd.textContent = text;
   $("sourceFacts").append(dt, dd);
 }
+let orbitalViewRequest = null;
 let cartographyController = null;
 let cartographyReport = null;
 let cartographyEpoch = 0;
@@ -320,6 +322,16 @@ function syncInstrument() {
     cartographyController = null;
     cartographyReport = null;
   }
+  if (
+    cartography &&
+    r &&
+    cartographyReport === r &&
+    cartographyController &&
+    orbitalViewRequest?.report === r
+  ) {
+    cartographyController.showOrbitalView(orbitalViewRequest.view);
+    orbitalViewRequest = null;
+  }
   if (!cartography || !r || cartographyReport === r) return;
   cartographyReport = r;
   const epoch = ++cartographyEpoch;
@@ -328,6 +340,8 @@ function syncInstrument() {
     .then(({ mountCartography }) => {
       if (epoch !== cartographyEpoch) return;
       cartographyController = mountCartography($("cartographyMount"), r, {
+        initialOrbitalView:
+          orbitalViewRequest?.report === r ? orbitalViewRequest.view : null,
         getExpeditionState(metadata, operation) {
           const kind = `expedition:${operation}:${metadata.key}`,
             rt = runtime(r);
@@ -358,6 +372,7 @@ function syncInstrument() {
           else renderHistory();
         },
       });
+      if (orbitalViewRequest?.report === r) orbitalViewRequest = null;
     })
     .catch(() => {
       if (epoch !== cartographyEpoch) return;
@@ -536,10 +551,13 @@ function render() {
     `Expand ${state.view} image of ${r.name}`,
   );
   $("expandHint").hidden = !asset || failed;
+  $("viewOnGlobe").hidden = state.view !== "orbital" || !asset?.globeView;
   $("planetLabel").textContent =
     asset?.kind === "reference"
       ? "Reference illustration · imagined landscape"
-      : "Artist interpretation · no surface observation implied";
+      : asset?.globeView
+        ? "Globe-guided interpretation · exact details may differ"
+        : "Artist interpretation · no surface observation implied";
   $("downloadBtn").disabled = !asset || failed;
   $("imageStatus").textContent =
     rt[state.view] === "pending"
@@ -698,12 +716,17 @@ function decodeImage(url) {
 function requestImage(r, view) {
   return runTask(r, view, async () => {
     if (!r.images[view]) {
-      const data = await post("/api/image", { ...reportBody(r), view }, 85000),
+      const data = await post(
+          "/api/image",
+          { ...reportBody(r), view, cartography: r.cartography },
+          85000,
+        ),
         asset = safeAsset(data.asset);
       if (!asset)
         throw new Error(
           "The image service returned an invalid image reference. Please retry.",
         );
+      if (view === "orbital") orbitalAssetMetadata(asset, r.cartography);
       r.images[view] = asset;
     }
     await decodeImage(r.images[view].url);
@@ -817,6 +840,15 @@ function showExpandedImage(asset, title, filename) {
   $("lightboxTitle").textContent = title;
   openDialog("lightbox");
 }
+$("viewOnGlobe").addEventListener("click", () => {
+  const r = active(),
+    view = r?.images.orbital?.globeView;
+  if (!view) return;
+  orbitalViewRequest = { report: r, view };
+  state.instrument = "cartography";
+  syncInstrument();
+  $("tabCartography").focus();
+});
 $("imageOpen").addEventListener("click", () => {
   const r = active(),
     asset = r?.images[state.view];
