@@ -44,11 +44,11 @@ Create public link stores an immutable snapshot under a random UUID. Anyone with
 
 The Upstash Lua reservation atomically enforces:
 
-| Operation | Per IP / hour | Global / 24 hours (default) | Concurrent requests |
-| --- | ---: | ---: | ---: |
-| Interpretation | 20 | 500 | 8 |
-| Image | 12 | 100 | 3 |
-| Public report | 20 | 500 | 8 |
+| Operation      | Per IP / hour | Global / 24 hours (default) | Concurrent requests |
+| -------------- | ------------: | --------------------------: | ------------------: |
+| Interpretation |            20 |                         500 |                   8 |
+| Image          |            12 |                         100 |                   3 |
+| Public report  |            20 |                         500 |                   8 |
 
 Windows start at the first request, rather than UTC midnight. Failed attempts consume allowance; limits count requests, not dollars. IP keys are HMAC-hashed, and shared NAT users share an allowance. Concurrency leases expire after 90 seconds even if a process disappears. A quota-store outage prevents new paid requests. The Redis integration test exercises actual concurrent Lua execution.
 
@@ -58,7 +58,7 @@ Public Blob objects persist until an operator deletes them. Deleting a report or
 
 `lib/planet.js` is shared by the browser and server. It computes gravity, density, escape speed, stellar-mass-aware orbital periods, and a simplified energy-balance temperature with an assumed greenhouse offset. Rotation is an input; prograde solar-day duration is calculated relative to the orbit. Measured NASA mass, radius and orbital values retain their original precision. Atmosphere, pressure, water, rotation, tilt and terrain on catalogue worlds remain explicit scenario assumptions.
 
-The displayed surface suitability is an illustrative 100-point rubric: temperature 40, plausible exposed liquid water 25, pressure 20, atmosphere 15. Airless worlds score zero; gas envelopes have no surface rating. ESI is a separate four-variable similarity index. Neither is a probability of life or a safety assessment. Classification and both image prompts use the same temperature/phase results and deterministic visual specification. Gas worlds offer a cloud-deck viewpoint.
+The displayed Surface Environment Index is an illustrative 100-point rubric: temperature 40, plausible exposed liquid water 25, pressure 20, atmosphere 15. Airless worlds score zero; gas envelopes have no surface rating. ESI is a separate four-variable similarity index. The Surface Environment Index excludes gravity, density, radiation, toxicity and biological viability; even 100/100 does not establish habitability or human safety. ESI remains separate. Classification and both image prompts use the same temperature/phase results and deterministic visual specification. Gas worlds offer a cloud-deck viewpoint.
 
 Fictional geography is designed from scratch, with a parameter-derived arrangement of landmasses and water basins rather than Earth's continent map. Mild, liquid-water nitrogen-atmosphere scenarios with exposed land can include explicitly imagined vegetation. Its palette and growth forms are shared by the interpretation and both image viewpoints; these are artistic choices, not detected life or a biological prediction. Frozen, airless, very hot and gas-envelope scenarios do not receive vegetation; entirely ocean-covered scenarios do not receive land vegetation. The Imagined biosphere control offers None, Familiar and Alien. Alien mode changes pigments, growth structures and habitat patterns with stellar class, gravity, water, temperature, pressure and tilt; ocean worlds can depict floating colonies. Conditions without modeled liquid water retain mineral/ice/cloud scenery. These are constrained design choices, not a model of alien evolution. Mode selection does not change the physics, suitability score or geography, and survives saved/shared reports. Older reports without this setting default to Familiar. Existing saved images remain unchanged; initiate a new survey to use updated art direction.
 
@@ -85,3 +85,19 @@ REDIS_SERVER=/usr/bin/redis-server REDIS_CLI=/usr/bin/redis-cli npm test
 The Redis test uses a temporary Unix socket with persistence disabled; it never connects to a configured production database. Without `REDIS_SERVER`, this test is explicitly skipped. Blob tests intercept the real SDK's HTTP requests; they do not need a live store. Browser tests do not make paid generation requests. GitHub Actions runs the build, unit/API/storage tests, real Redis test, Chromium flows and automated accessibility checks.
 
 Fonts: EB Garamond and Space Mono, self-hosted with licenses in `assets/fonts/`.
+
+### PSU-7 prompt and model checks
+
+`npm test` includes eight fixed image-prompt scenarios and deterministic geography checks without image API calls. Geography combines independent parameter-seeded topology, coastlines, islands, inland basins, polar distribution and tectonic motifs. Both views use the same specification; biosphere mode does not alter it. These are fictional arrangements rather than a simulated global map, so prompt consistency cannot guarantee matching rendered coastlines or prevent every Earth resemblance.
+
+Water saturation uses Antoine coefficients in mmHg (1–100°C and 99–374°C branches), with the liquid/vapor boundary capped below water’s 373.946°C critical temperature. Saturation results outside the supported range and subcritical temperatures at/above 220.64 bar return an explicit model-range uncertainty, without liquid-water points. High-temperature, low-pressure vapor and supercritical possibilities are handled separately. Freezing below 0°C is an educational approximation; salinity, pressure-dependent melting, local climate and exotic ice phases are not modeled.
+
+Optional offline review: `node scripts/image-quality-review.js --enable survey.json`, where the file contains `{ "params": {...}, "catalog": null }`. This outputs the shared specification and six unreviewed criteria for a developer comparing saved orbital/surface images. It is disabled unless explicitly enabled, performs no image analysis or network calls, and is excluded from the production bundle. No automatic regeneration is implemented.
+
+`npm run test:browser` checks narrow portrait and landscape viewports, axe accessibility, modal focus containment/restoration and synthetic mobile layout shift. Chromium emulation does not replace a physical iPhone/Safari check. Interpretation prompts prohibit acquisition/observation claims and distinguish catalogue evidence from scenario assumptions; provider adherence still requires qualitative review. Existing saved prose and images are preserved.
+
+Follow-up geography refinement favors compact irregular landmasses with substantial interiors, broad basins, short coastal protrusions and compact island groups. Long crescent/necklace/ribbon recipes were removed. Both prompts also receive the same deterministic imagined region (coastal margin, ice basin, dry basin, open ocean or upper clouds). Surface framing depicts that local region rather than squeezing the global water fraction into a landscape. The orbital prompt places the region on the facing hemisphere where applicable, without markers. These regional anchors are not coordinate maps and cannot guarantee pixel-level alignment between independently generated images. Changes affect newly generated images; saved images remain unchanged.
+
+### Code formatting
+
+Prettier uses its standard defaults, pinned as a development dependency. Run `npm run format` to format source, tests, markup, styles, documentation and configuration. Run `npm run lint` (or `npm run format:check`) to check formatting without changing files; CI enforces this alongside syntax checks and tests. Generated output, test evidence, environment files and the npm-generated lockfile are excluded. Prettier checks formatting; `npm run check` separately validates JavaScript syntax.

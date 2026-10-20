@@ -11,7 +11,10 @@
     "test": "node --test tests/*.test.js",
     "test:browser": "node tests/browser.mjs",
     "check": "node --check app.js && node --check lib/planet.js && node --check lib/server.js",
-    "build": "node scripts/build.js"
+    "build": "node scripts/build.js",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "npm run format:check"
   },
   "dependencies": {
     "@vercel/blob": "2.8.2"
@@ -19,6 +22,7 @@
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
     "playwright-core": "1.64.1",
+    "prettier": "3.9.10",
     "undici": "6.29.1"
   }
 }
