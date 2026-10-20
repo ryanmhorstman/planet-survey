@@ -1,6 +1,7 @@
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
+import { vendorThree } from "./vendor-three.js";
 const root = fileURLToPath(new URL("../", import.meta.url));
 export function siteOrigin(env = process.env) {
   const value =
@@ -40,10 +41,14 @@ export async function build(output = resolve(root, "dist"), env = process.env) {
     "assets",
     "lib/planet.js",
     "lib/client-report.js",
+    "lib/geography.js",
+    "lib/geography-worker.js",
+    "lib/globe.js",
   ]) {
     await mkdir(resolve(output, file, ".."), { recursive: true });
     await cp(resolve(root, file), resolve(output, file), { recursive: true });
   }
+  await vendorThree(resolve(output, "assets/vendor"));
   let html = await readFile(resolve(root, "index.html"), "utf8");
   if (origin) {
     const escaped = origin.replaceAll("&", "&amp;").replaceAll('"', "&quot;");

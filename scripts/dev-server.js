@@ -1,9 +1,11 @@
 import http from "node:http";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import { vendorThree } from "./vendor-three.js";
 const root = fileURLToPath(new URL("../", import.meta.url));
 if (process.env.PLANET_OPENAI_KEY && !process.env.OPENAI_API_KEY)
   process.env.OPENAI_API_KEY = process.env.PLANET_OPENAI_KEY;
+await vendorThree(root + "assets/vendor");
 const handlers = {};
 for (const name of [
   "analyze",
@@ -68,6 +70,12 @@ http
           "app.js",
           "lib/planet.js",
           "lib/client-report.js",
+          "lib/geography.js",
+          "lib/geography-worker.js",
+          "lib/globe.js",
+          "assets/vendor/three.core.js",
+          "assets/vendor/three.module.js",
+          "assets/vendor/OrbitControls.js",
           "og-image.png",
         ].includes(file) &&
         !/^assets\/[a-zA-Z0-9_/-]+\.(webp|woff2)$/.test(file)

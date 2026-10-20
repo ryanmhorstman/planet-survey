@@ -24,6 +24,7 @@ const state = {
   reports: [],
   activeId: null,
   view: "orbital",
+  instrument: "illustration",
   catalog: null,
   tasks: new Map(),
   capabilities: { analysis: false, images: false, sharing: false },
@@ -291,6 +292,69 @@ function addFact(label, text) {
   dd.textContent = text;
   $("sourceFacts").append(dt, dd);
 }
+let cartographyController = null;
+let cartographyReportId = null;
+let cartographyEpoch = 0;
+function syncInstrument() {
+  const cartography = state.instrument === "cartography",
+    r = active();
+  $("illustrationPanel").hidden = cartography;
+  $("cartographyPanel").hidden = !cartography;
+  $("downloadBtn").textContent = cartography
+    ? "↓ Download illustration"
+    : "↓ Download view";
+  for (const [id, selected] of [
+    ["tabIllustration", !cartography],
+    ["tabCartography", cartography],
+  ]) {
+    $(id).setAttribute("aria-selected", String(selected));
+    $(id).tabIndex = selected ? 0 : -1;
+  }
+  if (!cartography || !r || cartographyReportId !== r.id) {
+    cartographyEpoch++;
+    cartographyController?.dispose();
+    cartographyController = null;
+    cartographyReportId = null;
+  }
+  if (!cartography || !r || cartographyReportId === r.id) return;
+  cartographyReportId = r.id;
+  const epoch = ++cartographyEpoch;
+  $("cartographyMount").textContent = "Loading cartography instrument…";
+  import("./lib/globe.js")
+    .then(({ mountCartography }) => {
+      if (epoch !== cartographyEpoch) return;
+      cartographyController = mountCartography($("cartographyMount"), r);
+    })
+    .catch(() => {
+      if (epoch !== cartographyEpoch) return;
+      cartographyReportId = null;
+      $("cartographyMount").textContent =
+        "Cartography could not load. Switch tabs and retry. Existing illustrations and reports remain available.";
+    });
+}
+for (const [id, instrument] of [
+  ["tabIllustration", "illustration"],
+  ["tabCartography", "cartography"],
+]) {
+  $(id).addEventListener("click", () => {
+    state.instrument = instrument;
+    syncInstrument();
+  });
+  $(id).addEventListener("keydown", (event) => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const target =
+      event.key === "Home"
+        ? "tabIllustration"
+        : event.key === "End"
+          ? "tabCartography"
+          : id === "tabIllustration"
+            ? "tabCartography"
+            : "tabIllustration";
+    $(target).click();
+    $(target).focus();
+  });
+}
 function render() {
   renderAvailability();
   const r = active();
@@ -302,6 +366,7 @@ function render() {
     asset = r.images[state.view];
   $("idleState").hidden = true;
   $("resultState").hidden = false;
+  syncInstrument();
   $("reportOrigin").textContent = r.sample
     ? "REFERENCE WORLD · ARTIST INTERPRETATION"
     : r.catalog
@@ -587,8 +652,10 @@ async function generate() {
   runtime(r).launching = true;
   await refreshCapabilities();
   runtime(r).launching = false;
-  if (state.capabilities.analysis) void requestNarrative(r);
-  if (state.capabilities.images) void requestImage(r, "orbital");
+  if (state.instrument === "illustration") {
+    if (state.capabilities.analysis) void requestNarrative(r);
+    if (state.capabilities.images) void requestImage(r, "orbital");
+  }
 }
 function setView(view) {
   const r = active();

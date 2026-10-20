@@ -117,6 +117,175 @@ try {
     args: ["--no-sandbox"],
   });
   await mkdir("test-results", { recursive: true });
+  // Cartography is isolated and lazy; selection does not call paid providers.
+  for (const fallback of [false, true]) {
+    const ctx = await context(
+        {
+          viewport: {
+            width: fallback ? 375 : 1440,
+            height: fallback ? 812 : 1000,
+          },
+        },
+        true,
+      ),
+      page = await ctx.newPage();
+    await ctx.route("**/api/image", (route) =>
+      route.fulfill({ json: { asset: orbital } }),
+    );
+    await ctx.route("**/api/analyze", (route) =>
+      route.fulfill({ json: { narrative } }),
+    );
+    const fetched = [];
+    let paid = 0;
+    ctx.on("request", (req) => {
+      fetched.push(req.url());
+      if (/\/api\/(image|analyze)$/.test(req.url())) paid++;
+    });
+    if (fallback)
+      await page.addInitScript(() => {
+        const original = HTMLCanvasElement.prototype.getContext;
+        HTMLCanvasElement.prototype.getContext = function (type, ...args) {
+          return type.startsWith("webgl")
+            ? null
+            : original.call(this, type, ...args);
+        };
+      });
+    await page.goto(origin + "/?sample=boreal");
+    await page.locator("#planetNameDisplay").waitFor();
+    assert.ok(
+      !fetched.some((url) =>
+        /globe.js|geography-worker|three.module/.test(url),
+      ),
+      "Cartography loaded before activation",
+    );
+    await page.locator("#tabIllustration").focus();
+    await page.keyboard.press("ArrowRight");
+    await page.waitForFunction(() =>
+      document
+        .querySelector(".cartography-selection")
+        ?.textContent.includes("cartography-1"),
+    );
+    await page.waitForFunction(() =>
+      /3D model globe|3D graphics unavailable/.test(
+        document.querySelector(".cartography-status")?.textContent,
+      ),
+    );
+    if (!fallback)
+      assert.match(
+        await page.locator(".cartography-status").textContent(),
+        /3D model globe/,
+        "WebGL prototype did not initialize",
+      );
+    await page.locator('[name="latitude"]').fill("23");
+    await page.locator('[name="longitude"]').fill("45");
+    await page.getByRole("button", { name: "Inspect location" }).click();
+    const facts = await page.locator(".cartography-facts").textContent();
+    await a11y(page, `cartography-${fallback ? "fallback" : "globe"}`);
+    await noOverflow(page);
+    await page.screenshot({
+      path: `test-results/cartography-${fallback ? "fallback" : "globe"}.png`,
+      fullPage: true,
+    });
+    if (!fallback) {
+      for (const viewport of [
+        { width: 375, height: 812 },
+        { width: 844, height: 390 },
+      ]) {
+        await page.setViewportSize(viewport);
+        await noOverflow(page);
+        await a11y(page, `cartography-${viewport.width}`);
+        await page.screenshot({
+          path: `test-results/cartography-${viewport.width}.png`,
+          fullPage: true,
+        });
+      }
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await page.getByRole("button", { name: "Rotate globe west" }).click();
+      await page.getByRole("button", { name: "Zoom in", exact: true }).click();
+      assert.equal(
+        await page.locator(".cartography-facts").textContent(),
+        facts,
+      );
+      await page.getByRole("button", { name: "Center on site" }).click();
+      await page.evaluate(
+        () =>
+          new Promise((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(resolve)),
+          ),
+      );
+      const globeCanvas = page.locator(".cartography-stage canvas").last();
+      const bounds = await globeCanvas.boundingBox();
+      await globeCanvas.click({
+        position: { x: bounds.width / 2, y: bounds.height / 2 },
+      });
+      assert.ok(
+        Math.abs(
+          Number(await page.locator('[name="latitude"]').inputValue()) - 23,
+        ) < 1,
+      );
+      assert.ok(
+        Math.abs(
+          Number(await page.locator('[name="longitude"]').inputValue()) - 45,
+        ) < 1,
+      );
+      // Restore the exact saved coordinate after testing raycast picking.
+      await page.locator('[name="latitude"]').fill("23");
+      await page.locator('[name="longitude"]').fill("45");
+      await page.getByRole("button", { name: "Inspect location" }).click();
+      await page.getByRole("button", { name: "2D atlas" }).click();
+      assert.equal(
+        await page
+          .getByRole("button", { name: "2D atlas" })
+          .getAttribute("aria-pressed"),
+        "true",
+      );
+    }
+    await page.locator("#tabIllustration").click();
+    assert.ok(await page.locator("#imageOpen").isVisible());
+    await page.locator("#tabCartography").click();
+    await page.waitForFunction(() =>
+      document
+        .querySelector(".cartography-selection")
+        ?.textContent.includes("23.00°"),
+    );
+    assert.equal(await page.locator(".cartography-facts").textContent(), facts);
+    assert.equal(paid, 0);
+    await page.reload();
+    await page.locator("#tabCartography").click();
+    await page.waitForFunction(() =>
+      document
+        .querySelector(".cartography-selection")
+        ?.textContent.includes("23.00°"),
+    );
+    assert.equal(await page.locator(".cartography-facts").textContent(), facts);
+    const launchCapabilities = page.waitForResponse((response) =>
+      response.url().endsWith("/api/capabilities"),
+    );
+    await page.locator("#generateBtn").click();
+    await launchCapabilities;
+    await page.waitForFunction(() =>
+      document
+        .querySelector("#planetNameDisplay")
+        .textContent.startsWith("PSU-"),
+    );
+    await page.waitForFunction(() =>
+      document
+        .querySelector(".cartography-selection")
+        ?.textContent.includes("cartography-1"),
+    );
+    await page.waitForFunction(
+      () => !document.querySelector("#generateBtn").disabled,
+    );
+    assert.equal(
+      paid,
+      0,
+      "Starting a survey from Cartography called a paid provider",
+    );
+    await ctx.close();
+    results.push(
+      `Cartography ${fallback ? "2D fallback" : "3D globe"}: lazy loading, keyboard tabs, deterministic selection, refresh, isolation and no paid requests passed`,
+    );
+  }
   for (const [width, height] of [
     [320, 740],
     [375, 812],

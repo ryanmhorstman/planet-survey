@@ -357,53 +357,92 @@
             <li id="stageOrbital">02 · Orbital view</li>
             <li id="stageSurface">03 · Surface view</li>
           </ol>
-          <div class="planet-view">
-            <div class="view-toggle" role="group" aria-label="Viewpoint">
+          <div
+            class="instrument-tabs"
+            role="tablist"
+            aria-label="Exploration instrument"
+          >
+            <button
+              type="button"
+              role="tab"
+              id="tabIllustration"
+              aria-controls="illustrationPanel"
+              aria-selected="true"
+            >
+              Illustrations
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="tabCartography"
+              aria-controls="cartographyPanel"
+              aria-selected="false"
+              tabindex="-1"
+            >
+              Cartography <span>PREVIEW</span>
+            </button>
+          </div>
+          <section
+            id="illustrationPanel"
+            role="tabpanel"
+            aria-labelledby="tabIllustration"
+          >
+            <div class="planet-view">
+              <div class="view-toggle" role="group" aria-label="Viewpoint">
+                <button
+                  class="view-toggle-btn active"
+                  id="btnOrbital"
+                  type="button"
+                  aria-pressed="true"
+                >
+                  Orbital</button
+                ><button
+                  class="view-toggle-btn"
+                  id="btnSurface"
+                  type="button"
+                  aria-pressed="false"
+                >
+                  Surface
+                </button>
+              </div>
               <button
-                class="view-toggle-btn active"
-                id="btnOrbital"
+                class="image-frame"
+                id="imageOpen"
                 type="button"
-                aria-pressed="true"
+                aria-label="Expand planet image"
+                disabled
               >
-                Orbital</button
-              ><button
-                class="view-toggle-btn"
-                id="btnSurface"
-                type="button"
-                aria-pressed="false"
-              >
-                Surface
+                <img id="planetImage" alt="" hidden decoding="async" />
+                <div class="image-placeholder" id="imagePlaceholder">
+                  <div
+                    class="planet-sphere"
+                    id="planetSphere"
+                    aria-hidden="true"
+                  ></div>
+                  <span id="placeholderLabel">Model report ready</span>
+                </div>
+              </button>
+              <div class="image-caption">
+                <span id="planetLabel"
+                  >Artist interpretation · scenery is speculative</span
+                ><span id="expandHint" hidden>Expand image ↗</span>
+              </div>
+            </div>
+            <div class="request-status">
+              <p id="imageStatus"></p>
+              <button class="action-btn" id="imageRetry" type="button" hidden>
+                Render this view
               </button>
             </div>
-            <button
-              class="image-frame"
-              id="imageOpen"
-              type="button"
-              aria-label="Expand planet image"
-              disabled
-            >
-              <img id="planetImage" alt="" hidden decoding="async" />
-              <div class="image-placeholder" id="imagePlaceholder">
-                <div
-                  class="planet-sphere"
-                  id="planetSphere"
-                  aria-hidden="true"
-                ></div>
-                <span id="placeholderLabel">Model report ready</span>
-              </div>
-            </button>
-            <div class="image-caption">
-              <span id="planetLabel"
-                >Artist interpretation · scenery is speculative</span
-              ><span id="expandHint" hidden>Expand image ↗</span>
-            </div>
-          </div>
-          <div class="request-status">
-            <p id="imageStatus"></p>
-            <button class="action-btn" id="imageRetry" type="button" hidden>
-              Render this view
-            </button>
-          </div>
+          </section>
+          <section
+            id="cartographyPanel"
+            role="tabpanel"
+            aria-labelledby="tabCartography"
+            hidden
+          >
+            <div id="cartographyMount"></div>
+          </section>
           <div class="stats-row" aria-label="Estimated planetary properties">
             <div class="stat">
               <span class="stat-label">Mean temperature · estimate</span
