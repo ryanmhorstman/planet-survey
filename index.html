@@ -96,6 +96,34 @@
               Calculated physics. AI-generated illustrations. Imagined scenery.
             </p>
           </div>
+          <section class="world-collection" aria-labelledby="collectionTitle">
+            <h2 id="collectionTitle">Three worlds. Three possibilities.</h2>
+            <p class="microcopy">
+              Ready to explore, from orbit to imagined ground.
+            </p>
+            <div class="world-choices">
+              <button type="button" data-action="sample" data-world="boreal">
+                <span class="world-number">01 / ICE</span><strong>Boreal</strong
+                ><span>Frozen basins. Mineral shores.</span
+                ><span class="world-link">Explore Boreal ↗</span>
+              </button>
+              <button type="button" data-action="sample" data-world="cinder">
+                <span class="world-number">02 / STONE</span
+                ><strong>Cinder</strong
+                ><span>A black sky in broad daylight.</span
+                ><span class="world-link">Explore Cinder ↗</span>
+              </button>
+              <button type="button" data-action="sample" data-world="viridia">
+                <span class="world-number">03 / POSSIBILITY</span
+                ><strong>Viridia</strong
+                ><span>Familiar conditions. Imagined life.</span
+                ><span class="world-link">Explore Viridia ↗</span>
+              </button>
+            </div>
+            <button class="text-btn" id="createFromWelcome" type="button">
+              Shape your own world <span aria-hidden="true">→</span>
+            </button>
+          </section>
         </section>
         <p class="page-notice" id="pageNotice" hidden></p>
         <section
@@ -114,6 +142,33 @@
               Adjust parameters
             </button>
           </header>
+          <nav class="showcase-nav" aria-label="Explore reference worlds">
+            <span>Explore worlds</span>
+            <button
+              type="button"
+              data-action="sample"
+              data-world="boreal"
+              aria-pressed="false"
+            >
+              Boreal
+            </button>
+            <button
+              type="button"
+              data-action="sample"
+              data-world="cinder"
+              aria-pressed="false"
+            >
+              Cinder
+            </button>
+            <button
+              type="button"
+              data-action="sample"
+              data-world="viridia"
+              aria-pressed="false"
+            >
+              Viridia
+            </button>
+          </nav>
           <p class="page-notice" id="reportServiceNotice" hidden></p>
           <ol class="survey-stages" aria-label="Survey stages">
             <li id="stageModel">01 · Model calculated</li>
@@ -587,6 +642,14 @@
                 These parameters describe an educational scenario. They do not
                 establish a habitable world or a detected biosphere.
               </p>
+              <div class="conditions-preview">
+                <p class="param-label">With these assumptions</p>
+                <p id="conditionsPreview"></p>
+                <p class="microcopy">
+                  Estimated conditions for your next survey. Changing settings
+                  does not alter an existing illustration.
+                </p>
+              </div>
               <button class="action-btn" type="submit">
                 Survey these parameters <span aria-hidden="true">→</span>
               </button>

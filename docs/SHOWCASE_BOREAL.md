@@ -21,7 +21,7 @@ The orbital asset loads on the landing page with a 768px responsive variant for 
 
 ## Remaining work
 
-This completes the first world, not the full three-world collection or the Awwwards submission. Next: physical iPhone Safari and assistive-technology review, first-time visitor feedback, two contrasting curated worlds, and refreshed social/submission artwork. The existing social card still represents the earlier Boreal artwork. Globe exploration remains hidden by default. Production AI reliability and exact geographic continuity are not established by this showcase.
+Boreal was the first complete world. The [three-world collection](SHOWCASE_COLLECTION.md) now adds Cinder and Viridia and refreshes the social preview. The next gate is [first-time visitor testing](VISITOR_TESTING.md), including physical iPhone Safari and assistive-technology use. Submission artwork and the final Awwwards entry remain future work. Globe exploration remains hidden by default. Production AI reliability and exact geographic continuity are not established by this showcase.
 
 ## Validation
 

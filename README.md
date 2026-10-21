@@ -1,6 +1,6 @@
 # PSU-7 · Planetary Survey Unit
 
-An instrument for imagined worlds: deterministic planetary estimates, NASA catalogue starting points, and speculative AI field notes and imagery. The Boreal showcase includes bundled orbital and surface illustrations, matching field notes and a frozen mineral-world scenario; both perspectives and the numerical model work without API credentials. See [showcase art direction and limitations](docs/SHOWCASE_BOREAL.md).
+An instrument for imagined worlds: deterministic planetary estimates, NASA catalogue starting points, and speculative AI field notes and imagery. The curated collection includes Boreal (ice), Cinder (airless rock) and Viridia (temperate, imagined biology), each with bundled orbital/surface illustrations and matching field notes. Both perspectives and the numerical model work without API credentials. See [collection art direction and limitations](docs/SHOWCASE_COLLECTION.md) and [the first visitor test brief](docs/VISITOR_TESTING.md).
 
 ## Develop
 

@@ -10,6 +10,8 @@ import {
   ATMOSPHERES,
   createReport,
   sampleReport,
+  showcaseKey,
+  REFERENCE_ASSETS,
   paramsFromCatalog,
   validateParams,
   validateNarrative,
@@ -158,11 +160,16 @@ function updateValues() {
   }
   try {
     const p = readControls(),
-      biology = biosphereSpec(p, calculate(p, state.catalog));
+      f = calculate(p, state.catalog),
+      biology = biosphereSpec(p, f);
+    $("conditionsPreview").textContent =
+      `${format(f.temperatureC, 0)}°C mean · ${format(f.gravityG)} g · ${f.waterState}`;
     $("biosphereHelp").textContent = biology.present
       ? `Invented biology, not a life prediction. ${biology.palette}; ${biology.forms}.`
       : biology.reason;
   } catch {
+    $("conditionsPreview").textContent =
+      "Complete the settings to preview estimated conditions.";
     $("biosphereHelp").textContent =
       "An artistic choice, not a life prediction. Complete the scenario parameters to preview its treatment.";
   }
@@ -221,7 +228,7 @@ function readControls() {
         key,
         ["starType", "orbital", "atmosphere", "biosphere"].includes(key)
           ? $(id).value
-          : Number($(id).value),
+          : $(id).valueAsNumber,
       ]),
     ),
   );
@@ -423,6 +430,14 @@ for (const [id, instrument] of [
 function render() {
   renderAvailability();
   const r = active();
+  document
+    .querySelectorAll(".showcase-nav [data-world]")
+    .forEach((button) =>
+      button.setAttribute(
+        "aria-pressed",
+        String(Boolean(r?.sample) && button.dataset.world === showcaseKey(r)),
+      ),
+    );
   renderHistory();
   if (!r) return;
   const p = r.params,
@@ -557,11 +572,8 @@ function render() {
   );
   if (asset && !failed) {
     image.alt =
-      asset.kind === "reference"
-        ? state.view === "orbital"
-          ? "Boreal: an imagined glacial globe with white ice sheets, blue frozen basins and charcoal mineral highlands against space."
-          : "Boreal: an imagined surface of blue glacier walls, wind-scoured snow and exposed dark rock beneath a pale sky."
-        : `${r.name} — imagined ${state.view === "orbital" ? "orbital" : visualSpec(p, f).view.toLowerCase()} illustration of a ${f.classification.split(" — ")[1]?.toLowerCase() || "fictional"} world.`;
+      REFERENCE_ASSETS[asset.url]?.alt ||
+      `${r.name} — imagined ${state.view === "orbital" ? "orbital" : visualSpec(p, f).view.toLowerCase()} illustration of a ${f.classification.split(" — ")[1]?.toLowerCase() || "fictional"} world.`;
     image.onerror = () => {
       if (image.dataset.token !== token || active()?.id !== r.id) return;
       rt[state.view] = "error";
@@ -616,7 +628,7 @@ function selectReport(report, { scroll = true, controls = true } = {}) {
   const url = report.publicId
     ? `?report=${report.publicId}`
     : report.sample
-      ? "?sample=boreal"
+      ? `?sample=${showcaseKey(report)}`
       : location.pathname;
   history.replaceState(null, "", url);
   if (scroll) scrollToReport();
@@ -1007,7 +1019,11 @@ function openShare() {
   $("shareExplanation").textContent =
     "Create a public link containing this report and its available images. Anyone with the link can view it. Saved sites and selected coordinates are included. Later changes require a new link.";
   if (sharingReport.sample)
-    showShareURL(location.origin + location.pathname + "?sample=boreal");
+    showShareURL(
+      location.origin +
+        location.pathname +
+        `?sample=${showcaseKey(sharingReport)}`,
+    );
   else if (sharingReport.publicId)
     showShareURL(
       location.origin + location.pathname + "?report=" + sharingReport.publicId,
@@ -1063,10 +1079,10 @@ document
   .forEach((button) => button.addEventListener("click", () => void generate()));
 document.querySelectorAll('[data-action="sample"]').forEach((button) =>
   button.addEventListener("click", () => {
-    const r = sampleReport();
+    const r = sampleReport(button.dataset.world || "boreal");
     remember(r);
     selectReport(r);
-    announce("Boreal reference survey opened.");
+    announce(`${r.name} opened. Both perspectives are available.`);
   }),
 );
 $("surveyForm").addEventListener("input", updateValues);
@@ -1102,13 +1118,15 @@ $("randomizeBtn").addEventListener("click", () => {
   });
   announce("New fictional scenario selected. Initiate a survey to explore it.");
 });
-$("editParamsBtn").addEventListener("click", () => {
+$("createFromWelcome").addEventListener("click", openParameters);
+$("editParamsBtn").addEventListener("click", openParameters);
+function openParameters() {
   $("parameterDetails").open = true;
   $("parameterDetails").scrollIntoView({
     behavior: reducedMotion() ? "instant" : "smooth",
   });
   $("parameterDetails").querySelector("summary").focus({ preventScroll: true });
-});
+}
 $("btnOrbital").addEventListener("click", () => setView("orbital"));
 $("btnSurface").addEventListener("click", () => setView("surface"));
 $("imageRetry").addEventListener("click", () => {
@@ -1232,7 +1250,8 @@ async function boot() {
       );
       r = restoreReport(data.report);
       r.publicId = url.searchParams.get("report");
-    } else if (url.searchParams.get("sample") === "boreal") r = sampleReport();
+    } else if (url.searchParams.has("sample"))
+      r = sampleReport(url.searchParams.get("sample"));
     else if (location.hash.length > 1) {
       r = restoreLegacy(location.hash.slice(1));
     } else r = active();

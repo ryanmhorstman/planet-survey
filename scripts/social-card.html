@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>PSU-7 social preview</title>
+    <style>
+      @font-face {
+        font-family: Editorial;
+        src: url("../assets/fonts/eb-garamond-latin-400-normal.woff2");
+      }
+      @font-face {
+        font-family: Instrument;
+        src: url("../assets/fonts/space-mono-latin-400-normal.woff2");
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        width: 1200px;
+        height: 630px;
+        display: grid;
+        grid-template-columns: 430px 770px;
+        background: #080b0c;
+        color: #201c16;
+      }
+      section {
+        padding: 52px 40px;
+        background: #f1e9d2;
+        border-top: 3px solid #b08830;
+        display: flex;
+        flex-direction: column;
+      }
+      .label,
+      .note {
+        font:
+          11px/1.7 Instrument,
+          monospace;
+        letter-spacing: 1.3px;
+      }
+      .label {
+        color: #695323;
+      }
+      h1 {
+        font:
+          92px/1 Editorial,
+          serif;
+        margin: 80px 0 20px;
+      }
+      .description {
+        font:
+          35px/1.15 Editorial,
+          serif;
+        margin: 0;
+      }
+      .note {
+        margin-top: auto;
+        color: #655c4b;
+        letter-spacing: 0;
+      }
+      figure {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        position: relative;
+      }
+      img {
+        width: 770px;
+        height: auto;
+        display: block;
+      }
+      figcaption {
+        position: absolute;
+        bottom: 32px;
+        left: 36px;
+        font:
+          10px/1.6 Instrument,
+          monospace;
+        letter-spacing: 1.2px;
+        color: #d3bc80;
+      }
+    </style>
+  </head>
+  <body>
+    <section>
+      <div class="label">PLANETARY SURVEY UNIT / 007</div>
+      <h1>PSU-7</h1>
+      <p class="description">An instrument for<br />imagined worlds.</p>
+      <p class="note">Calculated physics.<br />AI-illustrated horizons.</p>
+    </section>
+    <figure>
+      <img
+        src="../assets/sample-orbital.webp"
+        alt="Boreal, an imagined glacial planet"
+        width="1536"
+        height="1024"
+      />
+      <figcaption>BOREAL / AN IMAGINED GLACIAL WORLD</figcaption>
+    </figure>
+  </body>
+</html>

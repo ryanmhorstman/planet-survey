@@ -125,6 +125,90 @@ try {
     args: ["--no-sandbox"],
   });
   await mkdir("test-results", { recursive: true });
+  // Curated worlds stay complete when live services are unavailable or enabled.
+  cartographyPreviewTests = false;
+  for (const live of [false, true]) {
+    const ctx = await context({ viewport: { width: 390, height: 844 } }, live),
+      page = await ctx.newPage();
+    let paidCalls = 0;
+    await ctx.route(/\/api\/(image|analyze)$/, (route) => {
+      paidCalls++;
+      return route.fulfill({
+        status: 500,
+        json: { error: "Showcase must not request generation" },
+      });
+    });
+    await page.goto(origin);
+    await page.locator('.world-choices [data-world="cinder"]').click();
+    for (const [key, prefix] of [
+      ["cinder", "cinder"],
+      ["viridia", "viridia"],
+      ["boreal", "sample"],
+    ]) {
+      await page.locator(`.showcase-nav [data-world="${key}"]`).click();
+      assert.equal(new URL(page.url()).search, `?sample=${key}`);
+      assert.equal(
+        await page
+          .locator(`.showcase-nav [data-world="${key}"]`)
+          .getAttribute("aria-pressed"),
+        "true",
+      );
+      await page.locator("#btnSurface").click();
+      await page.waitForFunction(
+        () =>
+          document.querySelector("#planetImage").complete &&
+          document.querySelector("#planetImage").naturalWidth > 0,
+      );
+      assert.equal(
+        await page.locator("#planetImage").getAttribute("src"),
+        `/assets/${prefix}-surface.webp`,
+      );
+      await page.locator("#shareBtn").click();
+      assert.match(
+        await page.locator("#shareURL").inputValue(),
+        new RegExp(`sample=${key}$`),
+      );
+      await page.keyboard.press("Escape");
+      await page.reload();
+      await page.locator("#btnSurface").click();
+      assert.equal(
+        await page.locator("#planetImage").getAttribute("src"),
+        `/assets/${prefix}-surface.webp`,
+      );
+      if (!live) await a11y(page, `showcase-${key}-mobile`);
+    }
+    assert.equal(paidCalls, 0);
+    const savedNote = await page.locator("#analysisBody").textContent();
+    const savedImage = await page.locator("#planetImage").getAttribute("src");
+    await page.locator("#editParamsBtn").click();
+    const before = await page.locator("#conditionsPreview").textContent();
+    await page.locator("#planetMass").fill("2");
+    assert.notEqual(
+      await page.locator("#conditionsPreview").textContent(),
+      before,
+    );
+    assert.equal(await page.locator("#analysisBody").textContent(), savedNote);
+    assert.equal(
+      await page.locator("#planetImage").getAttribute("src"),
+      savedImage,
+    );
+    await page.locator("#pressureBar").fill("");
+    assert.match(
+      await page.locator("#conditionsPreview").textContent(),
+      /Complete the settings/,
+    );
+    await page.locator("#pressureBar").fill("1");
+    await noOverflow(page);
+    await page.screenshot({
+      path: `test-results/showcase-conditions-${live}.png`,
+      fullPage: true,
+    });
+    await ctx.close();
+  }
+  results.push(
+    "Three curated worlds: real bundled image decode, no paid requests with services on/off, correct share links, reload, selected-world controls and isolated conditions preview passed",
+  );
+  cartographyPreviewTests = true;
   // New orbital images carry a reproducible reference camera; legacy images stay intact.
   {
     const ctx = await context({ viewport: { width: 390, height: 844 } }, true),
