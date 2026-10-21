@@ -362,3 +362,28 @@ test("alien morphology and pigments respond to stars, gravity, water, temperatur
   assert.equal(gas.vegetation, false);
   assert.match(sun.biosphere, /no familiar Earth trees, ferns/);
 });
+
+test("curated Boreal has two safe bundled views and an explicitly mineral environment", () => {
+  const r = sampleReport();
+  assert.equal(r.params.biosphere, "none");
+  assert.equal(r.physics.waterState, "Ice favored");
+  assert.ok(Math.abs(r.physics.temperatureC + 25) < 1);
+  for (const view of ["orbital", "surface"]) {
+    assert.deepEqual(safeAsset(r.images[view]), r.images[view]);
+    assert.deepEqual(
+      restoreReport(serializeReport(r)).images[view],
+      r.images[view],
+    );
+  }
+  assert.equal(safeAsset({ url: "/assets/unapproved.webp" }), null);
+  // Historical reference reports retain their original assumptions and geography.
+  const old = createReport({
+    params: { ...r.params, biosphere: "familiar" },
+    id: "boreal-reference",
+    sample: true,
+  });
+  const restored = restoreReport(serializeReport(old));
+  assert.equal(restored.params.biosphere, "familiar");
+  assert.deepEqual(restored.cartography, old.cartography);
+  assert.equal(restored.sample, false);
+});

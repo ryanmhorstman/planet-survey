@@ -54,26 +54,330 @@
       <span class="topbar-worlds">FIELD NOTES FROM POSSIBLE WORLDS</span>
     </header>
     <div class="app" id="app">
+      <main class="right-panel" id="mainContent" tabindex="-1">
+        <section class="welcome" id="idleState" aria-labelledby="welcomeTitle">
+          <div class="welcome-heading">
+            <p class="eyebrow">FIELD SURVEY / 007</p>
+            <h1 id="welcomeTitle" tabindex="-1">
+              A world beyond<br />
+              <em>the familiar.</em>
+            </h1>
+            <p>
+              Begin on Boreal, a frozen world beneath a distant sun. Explore its
+              orbit, step onto the ice, and discover the science behind an
+              imagined place.
+            </p>
+          </div>
+          <button
+            class="reference-image"
+            type="button"
+            data-action="sample"
+            aria-label="Explore Boreal — open orbital and surface illustrations"
+          >
+            <img
+              src="/assets/sample-orbital.webp"
+              srcset="
+                /assets/sample-orbital-small.webp  768w,
+                /assets/sample-orbital.webp       1536w
+              "
+              sizes="(max-width: 960px) calc(100vw - 40px), (max-width: 1100px) calc(100vw - 384px), calc(100vw - 424px)"
+              width="1536"
+              height="1024"
+              fetchpriority="high"
+              alt="Boreal, an imagined glacial planet with white ice sheets, blue frozen basins and exposed dark mineral terrain"
+            /><span>EXPLORE BOREAL <span aria-hidden="true">↗</span></span>
+          </button>
+          <div class="welcome-footer">
+            <p>
+              Two perspectives. One imagined world. Orbital and surface
+              illustrations are ready to explore—no generation wait.
+            </p>
+            <p class="microcopy">
+              Calculated physics. AI-generated illustrations. Imagined scenery.
+            </p>
+          </div>
+        </section>
+        <p class="page-notice" id="pageNotice" hidden></p>
+        <section
+          class="report"
+          id="resultState"
+          hidden
+          aria-labelledby="planetNameDisplay"
+        >
+          <header class="report-header">
+            <div>
+              <p class="eyebrow" id="reportOrigin">SPECULATIVE FIELD REPORT</p>
+              <h1 id="planetNameDisplay" tabindex="-1"></h1>
+              <p id="planetClassDisplay"></p>
+            </div>
+            <button class="text-btn" id="editParamsBtn" type="button">
+              Adjust parameters
+            </button>
+          </header>
+          <p class="page-notice" id="reportServiceNotice" hidden></p>
+          <ol class="survey-stages" aria-label="Survey stages">
+            <li id="stageModel">01 · Model calculated</li>
+            <li id="stageOrbital">02 · Orbital view</li>
+            <li id="stageSurface">03 · Surface view</li>
+          </ol>
+          <div
+            class="instrument-tabs"
+            id="instrumentTabs"
+            hidden
+            role="tablist"
+            aria-label="Exploration instrument"
+          >
+            <button
+              type="button"
+              role="tab"
+              id="tabIllustration"
+              aria-controls="illustrationPanel"
+              aria-selected="true"
+            >
+              Illustrations
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="tabCartography"
+              aria-controls="cartographyPanel"
+              aria-selected="false"
+              tabindex="-1"
+            >
+              Cartography <span>PREVIEW</span>
+            </button>
+          </div>
+          <section id="illustrationPanel" aria-label="Planet illustrations">
+            <div class="planet-view">
+              <div class="view-toggle" role="group" aria-label="Viewpoint">
+                <button
+                  class="view-toggle-btn active"
+                  id="btnOrbital"
+                  type="button"
+                  aria-pressed="true"
+                >
+                  Orbital</button
+                ><button
+                  class="view-toggle-btn"
+                  id="btnSurface"
+                  type="button"
+                  aria-pressed="false"
+                >
+                  Surface
+                </button>
+              </div>
+              <button
+                class="image-frame"
+                id="imageOpen"
+                type="button"
+                aria-label="Expand planet image"
+                disabled
+              >
+                <img id="planetImage" alt="" hidden decoding="async" />
+                <div class="image-placeholder" id="imagePlaceholder">
+                  <div
+                    class="planet-sphere"
+                    id="planetSphere"
+                    aria-hidden="true"
+                  ></div>
+                  <span id="placeholderLabel">Model report ready</span>
+                </div>
+              </button>
+              <div class="image-caption">
+                <span id="planetLabel"
+                  >Artist interpretation · scenery is speculative</span
+                ><span id="expandHint" hidden>Expand image ↗</span>
+              </div>
+            </div>
+            <div class="request-status">
+              <button class="action-btn" id="viewOnGlobe" type="button" hidden>
+                View on globe
+              </button>
+              <p id="imageStatus"></p>
+              <button class="action-btn" id="imageRetry" type="button" hidden>
+                Render this view
+              </button>
+            </div>
+          </section>
+          <section
+            id="cartographyPanel"
+            role="tabpanel"
+            aria-labelledby="tabCartography"
+            hidden
+          >
+            <div id="cartographyMount"></div>
+          </section>
+          <section class="analysis-section" aria-labelledby="analysisTitle">
+            <h2 class="analysis-label" id="analysisTitle">
+              // Field interpretation
+            </h2>
+            <p class="narrative-kind" id="narrativeKind"></p>
+            <p class="analysis-body" id="analysisBody"></p>
+            <div class="request-status">
+              <p id="analysisStatus"></p>
+              <button
+                class="action-btn"
+                id="analysisRetry"
+                type="button"
+                hidden
+              >
+                Retry interpretation
+              </button>
+            </div>
+          </section>
+          <dl class="stats-row" aria-label="Estimated planetary properties">
+            <div class="stat">
+              <dt class="stat-label">Mean temperature · estimate</dt>
+              <dd class="stat-value" id="statTemp"></dd>
+            </div>
+            <div class="stat">
+              <dt class="stat-label">Surface gravity · calculated</dt>
+              <dd class="stat-value" id="statGravity"></dd>
+            </div>
+            <div class="stat">
+              <dt class="stat-label">Escape velocity · calculated</dt>
+              <dd class="stat-value" id="statEscape"></dd>
+            </div>
+            <div class="stat">
+              <dt class="stat-label" id="yearSource">Orbital period</dt>
+              <dd class="stat-value" id="statYear"></dd>
+            </div>
+            <div class="stat">
+              <dt class="stat-label">Solar day · estimate</dt>
+              <dd class="stat-value" id="statDay"></dd>
+            </div>
+            <div class="stat">
+              <dt class="stat-label">Water phase · estimate</dt>
+              <dd class="stat-value" id="statWater"></dd>
+            </div>
+            <div class="stat">
+              <dt class="stat-label">Bulk density · calculated</dt>
+              <dd class="stat-value" id="statDensity"></dd>
+            </div>
+            <div class="stat">
+              <dt class="stat-label">Biosphere</dt>
+              <dd class="stat-value">Not established</dd>
+            </div>
+          </dl>
+          <section class="hab-section" aria-labelledby="suitabilityTitle">
+            <div class="hab-row">
+              <h2 class="hab-label" id="suitabilityTitle">
+                Surface Environment Index
+              </h2>
+              <span class="hab-score" id="habScore"></span>
+            </div>
+            <progress
+              id="habFill"
+              max="100"
+              value="0"
+              aria-labelledby="suitabilityTitle"
+            ></progress>
+            <p class="score-explanation">
+              Temperature, water phase, pressure and atmosphere assumptions
+              only. Even 100/100 does not imply Earth-like gravity,
+              habitability, biological viability or human safety.
+            </p>
+            <details class="method-details">
+              <summary>What goes into this score?</summary>
+              <ul id="scoreFactors"></ul>
+              <p>
+                Temperature: 40 points; exposed liquid water: 25; pressure: 20;
+                atmosphere: 15. Airless worlds score zero. Gas envelopes have no
+                surface score. Gravity, density, radiation, toxicity and
+                biological viability are not evaluated. Seasonal extremes,
+                atmospheric escape and geological evolution are not simulated.
+              </p>
+            </details>
+            <div class="hab-row esi-row">
+              <h2 class="hab-label" id="esiTitle">Earth Similarity Index</h2>
+              <span class="esi-score" id="esiScore"></span>
+            </div>
+            <progress
+              id="esiFill"
+              max="1"
+              value="0"
+              aria-labelledby="esiTitle"
+            ></progress>
+            <p class="score-explanation">
+              Similarity in radius, density, escape velocity and modeled
+              temperature. Similarity does not establish habitability.
+            </p>
+          </section>
+          <details class="provenance">
+            <summary>Evidence, assumptions & model limits</summary>
+            <p id="provenanceIntro"></p>
+            <dl id="sourceFacts"></dl>
+            <ul id="modelWarnings"></ul>
+            <p>
+              Energy balance and a pressure-scaled greenhouse offset estimate a
+              mean temperature; they do not resolve weather or seasons. Stellar
+              size and luminosity are representative unless catalogued. Tidal
+              state, geothermal activity and a biosphere remain unknown.
+            </p>
+            <a
+              href="https://exoplanetarchive.ipac.caltech.edu/docs/API_PSCompPars_columns.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              >NASA catalogue definitions ↗</a
+            >
+          </details>
+          <div class="action-bar visible">
+            <button class="action-btn" id="shareBtn" type="button">
+              ◈ Share report</button
+            ><button class="action-btn" id="downloadBtn" type="button" disabled>
+              ↓ Download view</button
+            ><button class="action-btn" id="exportBtn" type="button">
+              ↓ Save report
+            </button>
+          </div>
+        </section>
+        <section
+          class="history-strip"
+          id="historyStrip"
+          hidden
+          aria-labelledby="historyTitle"
+        >
+          <h2 class="history-label" id="historyTitle">
+            // Recent surveys on this device
+          </h2>
+          <div class="history-items" id="historyItems"></div>
+          <div class="history-tools">
+            <button class="text-btn" id="clearHistory" type="button">
+              Clear previous surveys</button
+            ><label class="text-btn import-label" for="importReport"
+              >Open saved report<input
+                type="file"
+                id="importReport"
+                accept="application/json,.json"
+            /></label>
+          </div>
+        </section>
+      </main>
       <aside class="left-panel" aria-label="Survey controls">
         <header class="panel-header">
           <div class="unit-tag">An instrument for imagined worlds</div>
-          <h1 class="unit-name">Planetary<br /><em>Survey</em> Unit</h1>
+          <p class="unit-name">Planetary<br /><em>Survey</em> Unit</p>
           <p class="unit-subtitle" id="operatorStatus">
             Physical estimates. Speculative horizons.
           </p>
         </header>
         <div class="primary-actions">
           <button
-            class="generate-btn"
+            class="generate-btn reference-btn"
+            data-action="sample"
+            type="button"
+          >
+            Explore a world <span aria-hidden="true">↗</span>
+          </button>
+          <button
+            class="create-survey-btn"
             id="generateBtn"
             data-action="survey"
             type="button"
           >
-            <span aria-hidden="true">◈</span> Initiate survey
+            Create a world <span aria-hidden="true">↗</span>
           </button>
-          <button class="reference-btn" data-action="sample" type="button">
-            Explore a reference world <span aria-hidden="true">↗</span>
-          </button>
+
           <p class="service-notice" id="serviceNotice" role="status">
             Model reports available · checking live services…
           </p>
@@ -297,300 +601,6 @@
           </button>
         </div>
       </aside>
-
-      <main class="right-panel" id="mainContent" tabindex="-1">
-        <section class="welcome" id="idleState" aria-labelledby="welcomeTitle">
-          <div class="welcome-heading">
-            <p class="eyebrow">FIELD SURVEY / 007</p>
-            <h2 id="welcomeTitle" tabindex="-1">Survey the possible.</h2>
-            <p>
-              Choose a star. Shape an atmosphere. Discover a world at the
-              intersection of physics and imagination.
-            </p>
-          </div>
-          <button
-            class="reference-image"
-            type="button"
-            data-action="sample"
-            aria-label="Boreal / Reference 07 — open illustrated survey"
-          >
-            <img
-              src="/assets/sample-orbital.webp"
-              width="1200"
-              height="630"
-              fetchpriority="high"
-              alt="An imagined ice-rich planet with blue basins and ochre terrain against black space"
-            /><span
-              >BOREAL / REFERENCE 07 <span aria-hidden="true">↗</span></span
-            >
-          </button>
-          <div class="welcome-footer">
-            <p>
-              Begin with the reference survey, or set your own planetary
-              assumptions. NASA catalogue values can provide a real starting
-              point.
-            </p>
-            <p class="microcopy">
-              Calculated physics. AI-generated illustrations. Imagined scenery.
-            </p>
-          </div>
-        </section>
-        <p class="page-notice" id="pageNotice" hidden></p>
-        <section
-          class="report"
-          id="resultState"
-          hidden
-          aria-labelledby="planetNameDisplay"
-        >
-          <header class="report-header">
-            <div>
-              <p class="eyebrow" id="reportOrigin">SPECULATIVE FIELD REPORT</p>
-              <h2 id="planetNameDisplay" tabindex="-1"></h2>
-              <p id="planetClassDisplay"></p>
-            </div>
-            <button class="text-btn" id="editParamsBtn" type="button">
-              Adjust parameters
-            </button>
-          </header>
-          <p class="page-notice" id="reportServiceNotice" hidden></p>
-          <ol class="survey-stages" aria-label="Survey stages">
-            <li id="stageModel">01 · Model calculated</li>
-            <li id="stageOrbital">02 · Orbital view</li>
-            <li id="stageSurface">03 · Surface view</li>
-          </ol>
-          <div
-            class="instrument-tabs"
-            id="instrumentTabs"
-            hidden
-            role="tablist"
-            aria-label="Exploration instrument"
-          >
-            <button
-              type="button"
-              role="tab"
-              id="tabIllustration"
-              aria-controls="illustrationPanel"
-              aria-selected="true"
-            >
-              Illustrations
-            </button>
-            <button
-              type="button"
-              role="tab"
-              id="tabCartography"
-              aria-controls="cartographyPanel"
-              aria-selected="false"
-              tabindex="-1"
-            >
-              Cartography <span>PREVIEW</span>
-            </button>
-          </div>
-          <section id="illustrationPanel" aria-label="Planet illustrations">
-            <div class="planet-view">
-              <div class="view-toggle" role="group" aria-label="Viewpoint">
-                <button
-                  class="view-toggle-btn active"
-                  id="btnOrbital"
-                  type="button"
-                  aria-pressed="true"
-                >
-                  Orbital</button
-                ><button
-                  class="view-toggle-btn"
-                  id="btnSurface"
-                  type="button"
-                  aria-pressed="false"
-                >
-                  Surface
-                </button>
-              </div>
-              <button
-                class="image-frame"
-                id="imageOpen"
-                type="button"
-                aria-label="Expand planet image"
-                disabled
-              >
-                <img id="planetImage" alt="" hidden decoding="async" />
-                <div class="image-placeholder" id="imagePlaceholder">
-                  <div
-                    class="planet-sphere"
-                    id="planetSphere"
-                    aria-hidden="true"
-                  ></div>
-                  <span id="placeholderLabel">Model report ready</span>
-                </div>
-              </button>
-              <div class="image-caption">
-                <span id="planetLabel"
-                  >Artist interpretation · scenery is speculative</span
-                ><span id="expandHint" hidden>Expand image ↗</span>
-              </div>
-            </div>
-            <div class="request-status">
-              <button class="action-btn" id="viewOnGlobe" type="button" hidden>
-                View on globe
-              </button>
-              <p id="imageStatus"></p>
-              <button class="action-btn" id="imageRetry" type="button" hidden>
-                Render this view
-              </button>
-            </div>
-          </section>
-          <section
-            id="cartographyPanel"
-            role="tabpanel"
-            aria-labelledby="tabCartography"
-            hidden
-          >
-            <div id="cartographyMount"></div>
-          </section>
-          <section class="analysis-section" aria-labelledby="analysisTitle">
-            <h3 class="analysis-label" id="analysisTitle">
-              // Field interpretation
-            </h3>
-            <p class="narrative-kind" id="narrativeKind"></p>
-            <p class="analysis-body" id="analysisBody"></p>
-            <div class="request-status">
-              <p id="analysisStatus"></p>
-              <button
-                class="action-btn"
-                id="analysisRetry"
-                type="button"
-                hidden
-              >
-                Retry interpretation
-              </button>
-            </div>
-          </section>
-          <dl class="stats-row" aria-label="Estimated planetary properties">
-            <div class="stat">
-              <dt class="stat-label">Mean temperature · estimate</dt>
-              <dd class="stat-value" id="statTemp"></dd>
-            </div>
-            <div class="stat">
-              <dt class="stat-label">Surface gravity · calculated</dt>
-              <dd class="stat-value" id="statGravity"></dd>
-            </div>
-            <div class="stat">
-              <dt class="stat-label">Escape velocity · calculated</dt>
-              <dd class="stat-value" id="statEscape"></dd>
-            </div>
-            <div class="stat">
-              <dt class="stat-label" id="yearSource">Orbital period</dt>
-              <dd class="stat-value" id="statYear"></dd>
-            </div>
-            <div class="stat">
-              <dt class="stat-label">Solar day · estimate</dt>
-              <dd class="stat-value" id="statDay"></dd>
-            </div>
-            <div class="stat">
-              <dt class="stat-label">Water phase · estimate</dt>
-              <dd class="stat-value" id="statWater"></dd>
-            </div>
-            <div class="stat">
-              <dt class="stat-label">Bulk density · calculated</dt>
-              <dd class="stat-value" id="statDensity"></dd>
-            </div>
-            <div class="stat">
-              <dt class="stat-label">Biosphere</dt>
-              <dd class="stat-value">Not established</dd>
-            </div>
-          </dl>
-          <section class="hab-section" aria-labelledby="suitabilityTitle">
-            <div class="hab-row">
-              <h3 class="hab-label" id="suitabilityTitle">
-                Surface Environment Index
-              </h3>
-              <span class="hab-score" id="habScore"></span>
-            </div>
-            <progress
-              id="habFill"
-              max="100"
-              value="0"
-              aria-labelledby="suitabilityTitle"
-            ></progress>
-            <p class="score-explanation">
-              Temperature, water phase, pressure and atmosphere assumptions
-              only. Even 100/100 does not imply Earth-like gravity,
-              habitability, biological viability or human safety.
-            </p>
-            <details class="method-details">
-              <summary>What goes into this score?</summary>
-              <ul id="scoreFactors"></ul>
-              <p>
-                Temperature: 40 points; exposed liquid water: 25; pressure: 20;
-                atmosphere: 15. Airless worlds score zero. Gas envelopes have no
-                surface score. Gravity, density, radiation, toxicity and
-                biological viability are not evaluated. Seasonal extremes,
-                atmospheric escape and geological evolution are not simulated.
-              </p>
-            </details>
-            <div class="hab-row esi-row">
-              <h3 class="hab-label" id="esiTitle">Earth Similarity Index</h3>
-              <span class="esi-score" id="esiScore"></span>
-            </div>
-            <progress
-              id="esiFill"
-              max="1"
-              value="0"
-              aria-labelledby="esiTitle"
-            ></progress>
-            <p class="score-explanation">
-              Similarity in radius, density, escape velocity and modeled
-              temperature. Similarity does not establish habitability.
-            </p>
-          </section>
-          <details class="provenance">
-            <summary>Evidence, assumptions & model limits</summary>
-            <p id="provenanceIntro"></p>
-            <dl id="sourceFacts"></dl>
-            <ul id="modelWarnings"></ul>
-            <p>
-              Energy balance and a pressure-scaled greenhouse offset estimate a
-              mean temperature; they do not resolve weather or seasons. Stellar
-              size and luminosity are representative unless catalogued. Tidal
-              state, geothermal activity and a biosphere remain unknown.
-            </p>
-            <a
-              href="https://exoplanetarchive.ipac.caltech.edu/docs/API_PSCompPars_columns.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              >NASA catalogue definitions ↗</a
-            >
-          </details>
-          <div class="action-bar visible">
-            <button class="action-btn" id="shareBtn" type="button">
-              ◈ Share report</button
-            ><button class="action-btn" id="downloadBtn" type="button" disabled>
-              ↓ Download view</button
-            ><button class="action-btn" id="exportBtn" type="button">
-              ↓ Save report
-            </button>
-          </div>
-        </section>
-        <section
-          class="history-strip"
-          id="historyStrip"
-          hidden
-          aria-labelledby="historyTitle"
-        >
-          <h2 class="history-label" id="historyTitle">
-            // Recent surveys on this device
-          </h2>
-          <div class="history-items" id="historyItems"></div>
-          <div class="history-tools">
-            <button class="text-btn" id="clearHistory" type="button">
-              Clear previous surveys</button
-            ><label class="text-btn import-label" for="importReport"
-              >Open saved report<input
-                type="file"
-                id="importReport"
-                accept="application/json,.json"
-            /></label>
-          </div>
-        </section>
-      </main>
     </div>
     <footer class="footer">
       <span>PSU-7 // AN EXPLORATORY FICTION</span

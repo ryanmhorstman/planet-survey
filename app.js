@@ -550,8 +550,7 @@ function render() {
         : "Model report ready";
   const token = `${r.id}:${state.view}:${asset?.url}`;
   image.dataset.token = token;
-  $("imageOpen").dataset.format =
-    asset?.kind === "reference" ? "wide" : "standard";
+  $("imageOpen").dataset.format = "standard";
   $("illustrationPanel").setAttribute(
     "aria-busy",
     String(rt[state.view] === "pending"),
@@ -559,7 +558,9 @@ function render() {
   if (asset && !failed) {
     image.alt =
       asset.kind === "reference"
-        ? "Boreal: an imagined ice-rich globe with pale ice fields, blue basins and ochre terrain against space."
+        ? state.view === "orbital"
+          ? "Boreal: an imagined glacial globe with white ice sheets, blue frozen basins and charcoal mineral highlands against space."
+          : "Boreal: an imagined surface of blue glacier walls, wind-scoured snow and exposed dark rock beneath a pale sky."
         : `${r.name} — imagined ${state.view === "orbital" ? "orbital" : visualSpec(p, f).view.toLowerCase()} illustration of a ${f.classification.split(" — ")[1]?.toLowerCase() || "fictional"} world.`;
     image.onerror = () => {
       if (image.dataset.token !== token || active()?.id !== r.id) return;

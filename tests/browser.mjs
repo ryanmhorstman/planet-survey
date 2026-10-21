@@ -1033,7 +1033,7 @@ try {
     await page.locator("#generateBtn").waitFor();
     await noOverflow(page);
     assert.ok(
-      (await page.locator("#generateBtn").boundingBox()).y < height - 60,
+      (await page.locator(".reference-image").boundingBox()).y < height - 60,
       "First action is outside first screen",
     );
     if ([375, 1440].includes(width)) {
@@ -1044,7 +1044,33 @@ try {
         animations: "disabled",
       });
     }
-    await page.locator(".reference-btn").click();
+    assert.equal(
+      await page.evaluate(() =>
+        performance
+          .getEntriesByType("resource")
+          .some((r) => r.name.endsWith("/assets/sample-surface.webp")),
+      ),
+      false,
+      "Surface illustration downloaded before it was requested",
+    );
+    let paidRequests = 0;
+    page.on("request", (request) => {
+      if (/\/api\/(image|analyze)$/.test(new URL(request.url()).pathname))
+        paidRequests++;
+    });
+    await page.locator(".reference-image").click();
+    await page.locator("#btnSurface").click();
+    assert.equal(
+      paidRequests,
+      0,
+      "Showcase unexpectedly requested live generation",
+    );
+    assert.equal(
+      await page.locator("#planetImage").getAttribute("src"),
+      "/assets/sample-surface.webp",
+    );
+    assert.equal(new URL(page.url()).search, "?sample=boreal");
+    await page.locator("#btnOrbital").click();
     assert.equal(await page.locator("#instrumentTabs").isVisible(), false);
     assert.equal(await page.locator("#viewOnGlobe").isVisible(), false);
     assert.equal(
@@ -1483,7 +1509,7 @@ try {
     "Late responses remain attached to their originating history record",
   );
   await race.close();
-  // Surface request deduplication and reference modifications survive refresh.
+  // A non-curated report still deduplicates surface requests and survives refresh.
   const views = await context({}, true),
     vp = await views.newPage();
   let releaseSurface,
@@ -1495,7 +1521,21 @@ try {
     });
     await route.fulfill({ json: { asset: surface } });
   });
-  await vp.goto(origin + "/?sample=boreal");
+  const unfinished = createReport({
+    params: DEFAULTS,
+    name: "Unfinished survey",
+    images: {
+      orbital: { url: "/assets/sample-orbital.webp", kind: "reference" },
+    },
+  });
+  await views.addInitScript((report) => {
+    if (!localStorage.getItem("psu7-reports-v2"))
+      localStorage.setItem(
+        "psu7-reports-v2",
+        JSON.stringify({ selected: report.id, reports: [report] }),
+      );
+  }, unfinished);
+  await vp.goto(origin);
   await vp.locator("#planetImage").waitFor();
   await vp.locator("#btnSurface").click();
   await waitFor(() => Boolean(releaseSurface), "Surface request did not begin");

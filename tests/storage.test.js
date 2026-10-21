@@ -178,3 +178,11 @@ test("Blob SDK round trip preserves signed images and recomputes report physics"
     else process.env.BLOB_READ_WRITE_TOKEN = oldToken;
   }
 });
+
+test("bundled showcase assets are accepted without widening the local asset allowlist", () => {
+  for (const view of ["orbital", "surface"]) {
+    const url = `/assets/sample-${view}.webp`;
+    assert.deepEqual(verifiedAsset({ url }), { url, kind: "reference" });
+  }
+  assert.throws(() => verifiedAsset({ url: "/assets/unapproved.webp" }));
+});

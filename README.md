@@ -1,6 +1,6 @@
 # PSU-7 · Planetary Survey Unit
 
-An instrument for imagined worlds: deterministic planetary estimates, NASA catalogue starting points, and speculative AI field notes and imagery. The illustrated Boreal reference survey and the numerical model work without API credentials.
+An instrument for imagined worlds: deterministic planetary estimates, NASA catalogue starting points, and speculative AI field notes and imagery. The Boreal showcase includes bundled orbital and surface illustrations, matching field notes and a frozen mineral-world scenario; both perspectives and the numerical model work without API credentials. See [showcase art direction and limitations](docs/SHOWCASE_BOREAL.md).
 
 ## Develop
 
