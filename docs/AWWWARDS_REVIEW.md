@@ -6,7 +6,7 @@ Reviewed 20 October 2026. Scope: the public survey experience, reference illustr
 
 **The concept and visual identity are strong; the submission package is not complete yet.** The strongest experience is a scientific field journal that turns physical assumptions into an imagined world. The parchment, restrained gold, serif narrative, monospaced instrumentation and dark illustration stage support that idea. Keep that direction. Adding more visual effects would contribute less than making the illustration collection and first successful survey dependable.
 
-Review lenses: design, usability, creativity and content, as illustrated by [Awwwards' published judging breakdown](https://www.awwwards.com/sites/nike-playlab). The [official mobile checklist](https://www.awwwards.com/mobile-excellence-guidelines.pdf) also emphasizes visible actions, readable type, usable forms, enlargement of images and measured loading performance. The checklist includes older technologies and metrics; it is a useful review reference, not a specification to implement wholesale or a claim about current award eligibility. The main evaluation page could not be retrieved during this review. No submission fee, category, deadline or award outcome is assumed.
+Research update, 21 October 2026: the official evaluation, FAQ, submission pricing and developer guidance have now been retrieved. See [the sourced submission strategy](AWWWARDS_STRATEGY.md) for verified judging rules, entry logistics, ranked improvements and acceptance criteria. That document supersedes this review's earlier uncertainty about access to the evaluation page; the application findings below remain the 20 October audit.
 
 ## Findings and changes
 

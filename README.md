@@ -128,7 +128,7 @@ New expedition images receive a server-rendered 512×512 regional PNG from the s
 
 Cartography is paused and hidden by default while the core survey and illustration experience is prepared for submission. The public interface does not expose the instrument tabs or “View on globe” and does not load the 3D renderer. Saved geography and expeditions remain intact; orbital image generation keeps its deterministic reference conditioning. Developers can enable the retained experiment for the current browser tab with `sessionStorage.setItem("psu7-cartography-preview", "1")` and reload; remove that key to disable it.
 
-See [the Awwwards preparation review](docs/AWWWARDS_REVIEW.md) for findings, implemented refinements, verification boundaries and remaining submission gates. The next priority is a curated reference experience with complete, consistent orbital/surface pairs and a physical-device/live-generation rehearsal.
+See [the Awwwards preparation review](docs/AWWWARDS_REVIEW.md) for application findings and [the sourced submission strategy](docs/AWWWARDS_STRATEGY.md) for verified rules, ranked improvements and acceptance criteria. The next priority is a curated reference experience with complete, consistent orbital/surface pairs and a physical-device/live-generation rehearsal.
 
 ### Regional terrain exploration
 
