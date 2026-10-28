@@ -1,0 +1,26 @@
+{
+  // Type-check plain JavaScript through JSDoc. No build step and no emitted
+  // files: the browser and Vercel run the sources as written. Coverage starts
+  // with the modules that carry security and LLM contracts and grows outward.
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": true,
+    "noImplicitAny": false,
+    "target": "es2023",
+    "lib": ["es2023", "dom"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "types": ["node"],
+    "skipLibCheck": true
+  },
+  "files": [
+    "lib/attest.js",
+    "lib/provenance.js",
+    "lib/prompts.js",
+    "lib/agent-tools.js",
+    "lib/field-researcher.js",
+    "lib/narrative-checks.js"
+  ]
+}
