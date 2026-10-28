@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { IMAGE_MODEL } from "../lib/server.js";
 import { inflateSync } from "node:zlib";
 import { DEFAULTS, createReport, calculate } from "../lib/planet.js";
 import { createGeography } from "../lib/geography.js";
@@ -127,8 +128,8 @@ test("orbital API makes one multipart request and saves its pinned reference met
         assert.ok(options.body instanceof FormData);
         assert.equal(options.headers["Content-Type"], undefined);
         assert.equal(options.body.get("n"), "1");
-        assert.equal(options.body.get("model"), "gpt-image-1");
-        assert.equal(options.body.get("input_fidelity"), "high");
+        assert.equal(options.body.get("model"), IMAGE_MODEL);
+        assert.equal(options.body.get("input_fidelity"), null);
         assert.equal(options.body.get("size"), "1536x1024");
         assert.equal(options.body.get("image").type, "image/png");
         assert.ok(options.body.get("image").size > 1000);

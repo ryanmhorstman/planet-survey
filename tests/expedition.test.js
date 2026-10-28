@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { IMAGE_MODEL } from "../lib/server.js";
 import { DEFAULTS, createReport, calculate } from "../lib/planet.js";
 import {
   prepareExpedition,
@@ -146,7 +147,7 @@ test("provider operations share existing quota scopes, release failures and bind
           assert.equal(options.headers["Content-Type"], undefined);
           assert.ok(options.body instanceof FormData);
           assert.equal(options.body.get("n"), "1");
-          assert.equal(options.body.get("model"), "gpt-image-1");
+          assert.equal(options.body.get("model"), IMAGE_MODEL);
           assert.match(options.body.get("prompt"), /Heading 90/);
           assert.match(
             options.body.get("prompt"),
