@@ -1,12 +1,22 @@
 # PSU-7 · Planetary Survey Unit
 
-A survey instrument for imagined planets. Pick a star, an orbit and an atmosphere, or start from a confirmed NASA exoplanet, and PSU-7 computes the world's physics, then has Claude write a field note and an image model paint it from orbit and from the ground.
-
-The split is the point: **a deterministic model owns every number, and the language model owns the prose.** Each field note comes back as sections tagged _calculated_, _estimated_, _assumed_ or _imagined_. The interface shows the tags, so the writing can be vivid without hedging every clause, and an eval checks that the prose never contradicts the data panel.
+A survey instrument for planets, real and imagined.
 
 ![Boreal, a curated ice world, seen from orbit](assets/sample-orbital-small.webp)
 
-## What to look at
+## Overview
+
+PSU-7 is a web app that tells you what it would be like to stand on another planet. You pick a star, an orbit, a size and an atmosphere, or start from one of the thousands of planets NASA has confirmed around other stars. PSU-7 works out the conditions: how warm it is, how long a day lasts, how heavy you would feel, whether water could stay liquid. Claude then writes a short field report from the surface, an image model paints the world from orbit and from the ground, and you can share the whole survey as a link.
+
+The interesting problem is trust. A language model writes just as confidently when it is wrong, so PSU-7 never lets the model choose a number. A physics model calculates every figure first, and Claude's job is to turn those figures into writing. Each part of the report is labelled by where it came from: _calculated_, _estimated_, _assumed_ or _imagined_. Automated checks catch writing that contradicts the numbers, such as a sunset on a planet that always shows the same face to its star, or waves on a frozen ocean. Shared links are signed, so nobody can pass off their own text as the AI's or made-up values as NASA's.
+
+There is also a **field researcher**. Give it a brief such as "a NASA world around a red dwarf that could keep liquid water", and Claude searches NASA's catalogue, runs the physics on candidates, and writes up the world it chooses. Every step it takes is shown on screen, and its report passes the same checks before it is accepted.
+
+## For engineers
+
+The split is the point: **a deterministic model owns every number, and the language model owns the prose.** Field notes come back as structured, tagged sections, so the writing can be vivid without hedging every clause, and an eval checks that the prose never contradicts the data panel.
+
+### What to look at
 
 | Area                    | Where                                                                                                                            | What it shows                                                                                                                                                                                                                                                                      |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
