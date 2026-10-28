@@ -25,6 +25,7 @@ import {
   restoreLegacy,
   safeAsset,
 } from "./lib/client-report.js";
+import { runFieldResearcher } from "./lib/field-researcher.js";
 
 const $ = (id) => document.getElementById(id);
 const state = {
@@ -38,6 +39,7 @@ const state = {
   capabilityStatus: "loading",
   browseFilter: "all",
   browseController: null,
+  researchController: null,
 };
 const active = () => state.reports.find((r) => r.id === state.activeId);
 const STORE = "psu7-reports-v2";
@@ -93,6 +95,7 @@ function renderAvailability() {
               ? "Live imagery available · interpretation unavailable."
               : "Model reports only · live interpretation and imagery unavailable.";
   $("serviceNotice").textContent = message;
+  $("researchBtn").hidden = !analysis;
   $("reportServiceNotice").textContent = message;
   $("reportServiceNotice").hidden =
     Boolean(active()?.sample) ||
@@ -1182,6 +1185,119 @@ $("lightboxDownload").addEventListener(
 $("exportBtn").addEventListener("click", exportReport);
 $("shareExport").addEventListener("click", exportReport);
 $("shareBtn").addEventListener("click", openShare);
+// Field researcher: Claude drives the same tools a visitor uses.
+const settingsSummary = (world) =>
+  [
+    world.catalogue_planet || "fictional",
+    world.star_type?.split(" ")[0],
+    world.orbit,
+    `${world.atmosphere?.split(" (")[0]} ${world.pressure_bar} bar`,
+    `${world.water_percent}% water`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+function resultSummary(name, content) {
+  try {
+    const data = JSON.parse(content);
+    if (name === "search_catalogue")
+      return data.planets.length
+        ? `${data.planets.length} planets: ${data.planets.map((p) => p.pl_name).join(", ")}`
+        : "No matching planets";
+    return `${data.classification} · ${data.temperature_c}°C${data.temperature_kind === "equilibrium" ? " (equilibrium)" : ""} · ${data.water_phase} · ${data.gravity_g} g`;
+  } catch {
+    return content;
+  }
+}
+function logResearch(event) {
+  const item = document.createElement("li");
+  item.className = `research-event research-${event.type}-event`;
+  const target = (call) =>
+    call.name === "search_catalogue"
+      ? ` "${call.input.query || call.input.filter}"`
+      : call.name === "compute_world"
+        ? ` ${settingsSummary(call.input)}`
+        : ` "${call.input.world_name}"`;
+  item.textContent =
+    event.type === "log"
+      ? event.text
+      : event.type === "tool"
+        ? `→ ${event.name}${target(event)}`
+        : event.type === "result"
+          ? `← ${event.isError ? `Rejected: ${event.content}` : resultSummary(event.name, event.content)}`
+          : `← Note returned for revision: ${event.reason}`;
+  if (event.type === "result" && event.isError) item.classList.add("is-error");
+  $("researchLog").append(item);
+  item.scrollIntoView({ block: "nearest" });
+}
+async function research() {
+  const brief = $("researchBrief").value.trim();
+  state.researchController?.abort();
+  const controller = new AbortController();
+  state.researchController = controller;
+  $("researchLog").replaceChildren();
+  $("researchRun").disabled = true;
+  $("researchStatus").textContent =
+    "Surveying. Each model turn can take up to a minute.";
+  try {
+    const { report, reply } = await runFieldResearcher({
+      brief,
+      signal: controller.signal,
+      post: (url, value) => post(url, value, 60000),
+      searchCatalogue: async (query, filter) =>
+        (
+          await request(
+            `/api/exoplanets?${new URLSearchParams(query ? { search: query } : { filter })}`,
+            { signal: controller.signal },
+            20000,
+          )
+        ).planets,
+      onEvent: (event) => {
+        if (state.researchController === controller) logResearch(event);
+      },
+    });
+    if (state.researchController !== controller) return;
+    if (!report) {
+      $("researchStatus").textContent =
+        reply || "The researcher finished without submitting a world.";
+      return;
+    }
+    const r = createReport({
+      params: report.params,
+      catalog: report.catalog,
+      physicsVersion: report.physicsVersion,
+      name: report.name,
+      narrative: report.narrative,
+    });
+    r.narrativeKind = "ai";
+    remember(r);
+    $("researchModal").close();
+    selectReport(r);
+    announce(`Field researcher report ready for ${r.name}.`);
+    if (state.capabilities.images && state.instrument === "illustration")
+      void requestImage(r, "orbital");
+  } catch (error) {
+    if (state.researchController === controller)
+      $("researchStatus").textContent = error.message;
+  } finally {
+    if (state.researchController === controller) {
+      state.researchController = null;
+      $("researchRun").disabled = false;
+    }
+  }
+}
+$("researchBtn").addEventListener("click", () => {
+  openDialog("researchModal");
+  $("researchBrief").focus();
+});
+$("researchForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  void research();
+});
+$("researchModal").addEventListener("close", () => {
+  state.researchController?.abort();
+  state.researchController = null;
+  $("researchRun").disabled = false;
+});
 $("browseBtn").addEventListener("click", () => {
   openDialog("browseModal");
   void browse();

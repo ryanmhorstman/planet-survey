@@ -1699,6 +1699,133 @@ try {
   );
   await broken.close();
   // Guard the first-screen layout against deferred-script/font shifts on a mobile connection.
+  // Field researcher: the loop runs in the page, tools execute locally and
+  // only model turns go to /api/agent (mocked here with a scripted model).
+  const researchCtx = await context(
+    { viewport: { width: 390, height: 844 } },
+    true,
+  );
+  const researchPage = await researchCtx.newPage();
+  const agentBodies = [];
+  const world = {
+    catalogue_planet: "",
+    star_type: "K-type (orange dwarf)",
+    orbit: "middle habitable zone",
+    atmosphere: "nitrogen-oxygen (Earth-like)",
+    pressure_bar: 1,
+    water_percent: 60,
+    mass_earth: 1,
+    radius_earth: 1,
+    tilt_deg: 20,
+    rotation_hours: 26,
+    biosphere: "none",
+  };
+  const researchParams = {
+    starType: world.star_type,
+    orbital: world.orbit,
+    atmosphere: world.atmosphere,
+    pressureBar: 1,
+    water: 60,
+    massEarth: 1,
+    radiusEarth: 1,
+    tilt: 20,
+    rotationHours: 26,
+    biosphere: "none",
+  };
+  await researchCtx.route("**/api/agent", async (route) => {
+    const body = route.request().postDataJSON();
+    agentBodies.push(body);
+    const turn = agentBodies.length;
+    const content =
+      turn === 1
+        ? [
+            { type: "text", text: "Checking a temperate orange-dwarf world." },
+            {
+              type: "tool_use",
+              id: "c1",
+              name: "compute_world",
+              input: world,
+            },
+          ]
+        : [
+            {
+              type: "tool_use",
+              id: "s1",
+              name: "submit_field_report",
+              input: { world_name: "Amberlee", world },
+            },
+          ];
+    await route.fulfill({
+      json:
+        turn === 1
+          ? { message: { content, stop_reason: "tool_use" } }
+          : {
+              message: { content, stop_reason: "tool_use" },
+              report: {
+                name: "Amberlee",
+                params: researchParams,
+                catalog: null,
+                physicsVersion: "physics-2",
+                narrative: {
+                  description:
+                    "Amberlee circles an orange dwarf. Shallow bays hold open water.",
+                  surfaceFeatures: "Shallow bays and low headlands.",
+                  sections: [
+                    {
+                      kind: "calculated",
+                      text: "Amberlee circles an orange dwarf.",
+                    },
+                    {
+                      kind: "imagined",
+                      text: "Shallow bays hold open water.",
+                    },
+                  ],
+                  signature: "b".repeat(64),
+                },
+              },
+            },
+    });
+  });
+  await researchPage.goto(origin);
+  await researchPage.locator("#researchBtn").waitFor();
+  await researchPage.locator("#researchBtn").click();
+  await a11y(researchPage, "research-390");
+  await researchPage
+    .locator("#researchBrief")
+    .fill("A temperate world around an orange dwarf");
+  await researchPage.locator("#researchRun").click();
+  await researchPage.locator("#researchModal").waitFor({ state: "hidden" });
+  assert.equal(agentBodies.length, 2);
+  assert.deepEqual(Object.keys(agentBodies[0]).sort(), [
+    "catalogs",
+    "messages",
+  ]);
+  // The second turn carries the local compute_world result, computed in the page.
+  const toolResult = agentBodies[1].messages[2].content[0];
+  assert.equal(toolResult.tool_use_id, "c1");
+  assert.match(JSON.parse(toolResult.content).classification, /^CLASS /);
+  assert.equal(
+    await researchPage.locator("#planetNameDisplay").textContent(),
+    "Amberlee",
+  );
+  assert.match(
+    await researchPage.locator("#narrativeKind").textContent(),
+    /AI-written field note/,
+  );
+  assert.deepEqual(await researchPage.locator(".note-kind").allTextContents(), [
+    "Calculated",
+    "Imagined",
+  ]);
+  assert.equal(
+    await researchPage.locator("#statBiosphere").textContent(),
+    "None depicted",
+  );
+  await noOverflow(researchPage);
+  results.push(
+    "Field researcher runs tools in the page, sends only model turns and opens a tagged AI report",
+  );
+  await researchCtx.close();
+
   const slow = await context({ viewport: { width: 390, height: 844 } }),
     sp = await slow.newPage();
   const cdp = await slow.newCDPSession(sp);
