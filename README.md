@@ -1,149 +1,84 @@
 # PSU-7 · Planetary Survey Unit
 
-An instrument for imagined worlds: deterministic planetary estimates, NASA catalogue starting points, and speculative AI field notes and imagery. The curated collection includes Boreal (ice), Cinder (airless rock) and Viridia (temperate, imagined biology), each with bundled orbital/surface illustrations and matching field notes. Both perspectives and the numerical model work without API credentials. See [collection art direction and limitations](docs/SHOWCASE_COLLECTION.md) and [the first visitor test brief](docs/VISITOR_TESTING.md).
+A survey instrument for planets, real and imagined.
 
-## Develop
+![Boreal, a curated ice world, seen from orbit](assets/sample-orbital-small.webp)
 
-Use Node.js 24.x.
+## Overview
+
+PSU-7 is a web app that tells you what it would be like to stand on another planet. You pick a star, an orbit, a size and an atmosphere, or start from one of the thousands of planets NASA has confirmed around other stars. PSU-7 works out the conditions: how warm it is, how long a day lasts, how heavy you would feel, whether water could stay liquid. Claude then writes a short field report from the surface, an image model paints the world from orbit and from the ground, and you can share the whole survey as a link.
+
+The interesting problem is trust. A language model writes just as confidently when it is wrong, so PSU-7 never lets the model choose a number. A physics model calculates every figure first, and Claude's job is to turn those figures into writing. Each part of the report is labelled by where it came from: _calculated_, _estimated_, _assumed_ or _imagined_. Automated checks catch writing that contradicts the numbers, such as a sunset on a planet that always shows the same face to its star, or waves on a frozen ocean. Shared links are signed, so nobody can pass off their own text as the AI's or made-up values as NASA's.
+
+There is also a **field researcher**. Give it a brief such as "a NASA world around a red dwarf that could keep liquid water", and Claude searches NASA's catalogue, runs the physics on candidates, and writes up the world it chooses. Every step it takes is shown on screen, and its report passes the same checks before it is accepted.
+
+## For engineers
+
+The split is the point: **a deterministic model owns every number, and the language model owns the prose.** Field notes come back as structured, tagged sections, so the writing can be vivid without hedging every clause, and an eval checks that the prose never contradicts the data panel.
+
+### What to look at
+
+| Area                    | Where                                                                                                                            | What it shows                                                                                                                                                                                                                                                                      |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Prompts                 | [`lib/prompts.js`](lib/prompts.js)                                                                                               | Every Claude prompt in one file: a byte-stable, cached system prompt; curated notes as few-shot examples; a compact fact sheet in place of raw model JSON; JSON-schema structured output.                                                                                          |
+| Agent                   | [`api/agent.js`](api/agent.js), [`lib/agent-tools.js`](lib/agent-tools.js), [`lib/field-researcher.js`](lib/field-researcher.js) | "Ask the field researcher": Claude searches the NASA catalogue and runs the physics model through tools that execute **in the browser**. The server only proxies model turns, owns the prompt and tools, and checks a submitted note against recomputed physics before signing it. |
+| Evals                   | [`lib/narrative-checks.js`](lib/narrative-checks.js), [`scripts/eval-narratives.js`](scripts/eval-narratives.js)                 | Contradiction checks (haze on airless worlds, waves on frozen ones, sunsets on tidally locked ones, star colour, ungrounded temperatures, invented moons) plus hedges per sentence, reported with Wilson intervals. The same checks guard agent submissions.                       |
+| Physics                 | [`lib/planet.js`](lib/planet.js)                                                                                                 | One module shared by browser and server: flux, Kepler periods, sidereal vs solar day, escape velocity, density, a greenhouse offset, ice albedo and airless mean-temperature bounds. Versioned, so saved reports keep their numbers.                                               |
+| Provenance and security | [`lib/attest.js`](lib/attest.js), [`lib/provenance.js`](lib/provenance.js), [`lib/server.js`](lib/server.js)                     | Paid routes reserve atomic Upstash quotas and fail closed. NASA records, AI notes and images carry HMAC signatures, so a public link cannot show uploaded text as AI-written or invented values as NASA data.                                                                      |
+
+## How a survey flows
+
+```
+browser                                   server (Vercel functions)              providers
+───────                                   ─────────────────────────              ─────────
+lib/planet.js computes physics ──┐
+                                 ├─ POST /api/analyze  (params only) ─► validate · quota ─► Claude: fact sheet → tagged JSON
+render report immediately        │                                     sign note ◄────────┘
+                                 ├─ POST /api/image    (params only) ─► validate · quota ─► image model ─► Blob, signed URL
+                                 └─ POST /api/reports  (snapshot)    ─► keep only signed content ─► Blob, public link
+
+field researcher loop (browser)  ─ POST /api/agent (brief + tool results) ─► fixed prompt + tools ─► Claude
+   runs search_catalogue / compute_world locally ◄── tool_use ───────────┘
+   submit_field_report ───────────────────────────► recompute physics · eval checks · sign
+```
+
+Clients never send a prompt. Every route accepts structured parameters, validates them against enums and numeric ranges, and builds the prompt on the server.
+
+## Run it
+
+Node.js 24.
 
 ```sh
 npm ci
-npm run dev
+npm run dev        # http://127.0.0.1:3000
 ```
 
-Open `http://127.0.0.1:3000`. `PORT` changes the port. The development server runs the same API handlers as Vercel; it is a small local adapter, not a full Vercel emulator. Copy `.env.example` to `.env.local` to configure optional services. Never commit credential values.
+The reference worlds, physics and model notes work with no credentials. For live notes, images and sharing, copy `.env.example` to `.env.local` and fill in the keys it lists; [docs/REFERENCE.md](docs/REFERENCE.md) covers Vercel, Blob and Upstash setup.
 
-For Codex cloud's HTTPS proxy, use:
-
-```sh
-node --use-env-proxy --env-file-if-exists=.env.local scripts/dev-server.js
-```
-
-`npm run build` produces the public static files in `dist/`. Vercel separately deploys the root `api/` functions. Only browser-safe modules are copied into `dist/lib`; server credentials and storage code stay server-side.
-
-## Vercel deployment
-
-1. Import this repository into Vercel using Node.js 24.x. `vercel.json` supplies the build command, output directory, security headers and function durations. The selected plan must permit the 90-second image function duration.
-2. Create a **public Vercel Blob store** and connect it to the project. Set its `BLOB_READ_WRITE_TOKEN` in the server environment. Generated WebP images and versioned report JSON are stored there.
-3. Create an **Upstash Redis** database and connect it to this project's **Production** environment. The app accepts the integration's `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` or `KV_REST_API_URL` / `KV_REST_API_TOKEN` automatically. You can override them with `RATE_LIMIT_REDIS_REST_URL` / `RATE_LIMIT_REDIS_REST_TOKEN`. A complete pair is required; credentials from different pairs are never mixed. These are REST credentials, not a Redis TCP URL/password. Use a separate database for previews if their quotas should be independent.
-4. Set `ANTHROPIC_API_KEY` for field interpretations and `OPENAI_API_KEY` for imagery. `PLANET_OPENAI_KEY` is an alternative image-key name for cloud environments that reserve `OPENAI_` names. Models currently used: `claude-sonnet-4-5` and `gpt-image-1`; the accounts must have access to them.
-5. Set `SITE_URL` to the final production origin, such as `https://your-domain.example`, or enable Vercel's system environment variables. The build falls back to `VERCEL_PROJECT_PRODUCTION_URL`, then `VERCEL_URL`, and emits absolute canonical/social image URLs. Shared reports currently use the site's generic social card.
-6. Review `DAILY_ANALYSIS_LIMIT`, `DAILY_IMAGE_LIMIT`, and `DAILY_SHARE_LIMIT`, and configure account spending controls with the AI providers. Deploy, then complete the [release rehearsal](docs/RELEASE.md).
-
-No credential is needed for NASA catalogue requests. Missing services are reported through `/api/capabilities`; the frontend keeps reference and model reports available. Blob is required for live imagery so every returned image has a durable reference. Shared quotas are required for all live production generation and report publication. `PSU7_ALLOW_LOCAL_QUOTAS=true` enables a simple hourly in-memory limiter only for local development; it is ignored on Vercel and in production.
-
-After connecting storage or changing variables, **redeploy Production** so the server functions receive them. Check `/api/capabilities` before considering a live-generation rollout complete. Its `configuration` object reports only booleans: `analysisProvider`, `imageProvider`, `imageStorage`, and `sharedQuotas`. All four should be true for the full experience. False `sharedQuotas` disables both AI requests; false `imageStorage` additionally disables imagery and public sharing. Existing AI keys alone are not sufficient. Initiate Survey refreshes this check so a transient startup failure cannot disable generation for the rest of a browser session.
-
-For restricted outbound networks allow `api.anthropic.com`, `api.openai.com`, `exoplanetarchive.ipac.caltech.edu`, `vercel.com`, the connected `*.public.blob.vercel-storage.com` store, and the exact Upstash REST hostname. Fonts are self-hosted. Blob's SDK derives the store ID from its token, and image signatures use that token locally: it requires an actual server-side token, not a placeholder intended solely for proxy substitution.
-
-## Reports and quotas
-
-Reports own their parameters, catalogue measurements, derived estimates, interpretation, and both image references. Asynchronous tasks update their originating report. The last five reports are kept in local storage; Save report exports portable JSON, and Open saved report imports it. Exported files contain image URLs, not embedded image bytes. Download view saves the selected image itself.
-
-Create public link stores an immutable snapshot under a random UUID. Anyone with the link can read it and its public images. Changes made after publication require a new link. Images are verified with a server HMAC before inclusion in a newly published report. Reading an existing report does not recheck old signatures, so key rotation does not break existing links; re-publishing an old image after rotation requires re-signing it or generating a new image. Numerical fields are recalculated on load, never accepted from imported JSON or AI output. Original fragment links still open with recalculated values, but cannot recover imagery that those links never saved.
-
-The Upstash Lua reservation atomically enforces:
-
-| Operation      | Per IP / hour | Global / 24 hours (default) | Concurrent requests |
-| -------------- | ------------: | --------------------------: | ------------------: |
-| Interpretation |            20 |                         500 |                   8 |
-| Image          |            12 |                         100 |                   3 |
-| Public report  |            20 |                         500 |                   8 |
-
-Windows start at the first request, rather than UTC midnight. Failed attempts consume allowance; limits count requests, not dollars. IP keys are HMAC-hashed, and shared NAT users share an allowance. Concurrency leases expire after 90 seconds even if a process disappears. A quota-store outage prevents new paid requests. The Redis integration test exercises actual concurrent Lua execution.
-
-Public Blob objects persist until an operator deletes them. Deleting a report or its referenced image breaks the corresponding link; clearing browser history does not delete public objects. Review retention and storage costs before promoting the site. There is no automatic garbage collection in this version.
-
-## Scientific scope
-
-`lib/planet.js` is shared by the browser and server. It computes gravity, density, escape speed, stellar-mass-aware orbital periods, and a simplified energy-balance temperature with an assumed greenhouse offset. Rotation is an input; prograde solar-day duration is calculated relative to the orbit. Measured NASA mass, radius and orbital values retain their original precision. Atmosphere, pressure, water, rotation, tilt and terrain on catalogue worlds remain explicit scenario assumptions.
-
-The displayed Surface Environment Index is an illustrative 100-point rubric: temperature 40, plausible exposed liquid water 25, pressure 20, atmosphere 15. Airless worlds score zero; gas envelopes have no surface rating. ESI is a separate four-variable similarity index. The Surface Environment Index excludes gravity, density, radiation, toxicity and biological viability; even 100/100 does not establish habitability or human safety. ESI remains separate. Classification and both image prompts use the same temperature/phase results and deterministic visual specification. Gas worlds offer a cloud-deck viewpoint.
-
-Fictional geography is designed from scratch, with a parameter-derived arrangement of landmasses and water basins rather than Earth's continent map. Mild, liquid-water nitrogen-atmosphere scenarios with exposed land can include explicitly imagined vegetation. Its palette and growth forms are shared by the interpretation and both image viewpoints; these are artistic choices, not detected life or a biological prediction. Frozen, airless, very hot and gas-envelope scenarios do not receive vegetation; entirely ocean-covered scenarios do not receive land vegetation. The Imagined biosphere control offers None, Familiar and Alien. Alien mode changes pigments, growth structures and habitat patterns with stellar class, gravity, water, temperature, pressure and tilt; ocean worlds can depict floating colonies. Conditions without modeled liquid water retain mineral/ice/cloud scenery. These are constrained design choices, not a model of alien evolution. Mode selection does not change the physics, suitability score or geography, and survives saved/shared reports. Older reports without this setting default to Familiar. Existing saved images remain unchanged; initiate a new survey to use updated art direction.
-
-This is not a climate, atmospheric escape, orbital stability, geology, tidal evolution, biosphere or seasonal simulation. Water and tilt do not change the mean energy-balance estimate. Catalogue equilibrium temperatures may use different assumptions. The water-phase approximation is illustrative, especially at high pressures. The sample illustration is an artistic reference, not a validated rendering. Prompt constraints reduce image contradictions but cannot guarantee visual compliance.
-
-## Verification
+## Checks
 
 ```sh
-npm run check
-npm test
-npm run build
-npx playwright-core install chromium
+npm run lint        # Prettier
+npm run check       # syntax of every module
+npm run typecheck   # tsc over JSDoc types (no build step)
+npm test            # unit, API, storage, provenance, agent and eval-checker tests
+npm run eval        # field-note checks on the curated notes (free)
+npm run eval:live   # 40 live field notes through the production prompt (paid)
 npm run test:browser
 ```
 
-Browser checks use a system `/usr/bin/chromium` if available; otherwise the Playwright-managed browser. `CHROMIUM_PATH` overrides it. They start an isolated local server on port 3002 (`TEST_PORT` overrides), use controlled API responses, and write screenshots and axe results to ignored `test-results/`.
+CI runs all of these except `eval:live`, plus a real-Redis concurrency test and axe accessibility audits.
 
-To include the real Redis concurrency test, install Redis and set executable paths:
+## Design decisions
 
-```sh
-REDIS_SERVER=/usr/bin/redis-server REDIS_CLI=/usr/bin/redis-cli npm test
-```
+- **Plain JavaScript, no framework or bundler.** The browser loads ES modules as written. Types come from JSDoc checked by `tsc --noEmit`, starting with the modules that carry security and LLM contracts.
+- **Structured output over prose parsing.** Notes use `output_config.format` with a JSON schema; the server validates the sections, rebuilds the description from them and rejects anything else.
+- **Curated notes are labelled as curated.** Boreal, Cinder and Viridia have hand-written notes, shown as "Curated reference note". They are the few-shot examples, and a test checks every temperature they quote against the model.
+- **Physics changes are versioned.** Adding ice albedo moved Boreal from −25 °C to −43 °C. Reports carry `physicsVersion`, so a link published under the old model still shows its original numbers.
 
-The Redis test uses a temporary Unix socket with persistence disabled; it never connects to a configured production database. Without `REDIS_SERVER`, this test is explicitly skipped. Blob tests intercept the real SDK's HTTP requests; they do not need a live store. Browser tests do not make paid generation requests. GitHub Actions runs the build, unit/API/storage tests, real Redis test, Chromium flows and automated accessibility checks.
+## More
 
-Fonts: EB Garamond and Space Mono, self-hosted with licenses in `assets/fonts/`.
-
-### PSU-7 prompt and model checks
-
-`npm test` includes eight fixed image-prompt scenarios and deterministic geography checks without image API calls. Geography combines independent parameter-seeded topology, coastlines, islands, inland basins, polar distribution and tectonic motifs. Both views use the same specification; biosphere mode does not alter it. These are fictional arrangements rather than a simulated global map, so prompt consistency cannot guarantee matching rendered coastlines or prevent every Earth resemblance.
-
-Water saturation uses Antoine coefficients in mmHg (1–100°C and 99–374°C branches), with the liquid/vapor boundary capped below water’s 373.946°C critical temperature. Saturation results outside the supported range and subcritical temperatures at/above 220.64 bar return an explicit model-range uncertainty, without liquid-water points. High-temperature, low-pressure vapor and supercritical possibilities are handled separately. Freezing below 0°C is an educational approximation; salinity, pressure-dependent melting, local climate and exotic ice phases are not modeled.
-
-Optional offline review: `node scripts/image-quality-review.js --enable survey.json`, where the file contains `{ "params": {...}, "catalog": null }`. This outputs the shared specification and six unreviewed criteria for a developer comparing saved orbital/surface images. It is disabled unless explicitly enabled, performs no image analysis or network calls, and is excluded from the production bundle. No automatic regeneration is implemented.
-
-`npm run test:browser` checks narrow portrait and landscape viewports, axe accessibility, modal focus containment/restoration and synthetic mobile layout shift. Chromium emulation does not replace a physical iPhone/Safari check. Interpretation prompts prohibit acquisition/observation claims and distinguish catalogue evidence from scenario assumptions; provider adherence still requires qualitative review. Existing saved prose and images are preserved.
-
-Follow-up geography refinement favors compact irregular landmasses with substantial interiors, broad basins, short coastal protrusions and compact island groups. Long crescent/necklace/ribbon recipes were removed. Both prompts also receive the same deterministic imagined region (coastal margin, ice basin, dry basin, open ocean or upper clouds). Surface framing depicts that local region rather than squeezing the global water fraction into a landscape. The orbital prompt places the region on the facing hemisphere where applicable, without markers. These regional anchors are not coordinate maps and cannot guarantee pixel-level alignment between independently generated images. Changes affect newly generated images; saved images remain unchanged.
-
-### Code formatting
-
-Prettier uses its standard defaults, pinned as a development dependency. Run `npm run format` to format source, tests, markup, styles, documentation and configuration. Run `npm run lint` (or `npm run format:check`) to check formatting without changing files; CI enforces this alongside syntax checks and tests. Generated output, test evidence, environment files and the npm-generated lockfile are excluded. Prettier checks formatting; `npm run check` separately validates JavaScript syntax.
-
-### Cartography preview
-
-Open a report or the reference world and choose **Cartography** beside **Illustrations**. The lazy-loaded explorer offers a rotatable Three.js globe, zoom, click/tap picking, explicit latitude/longitude inspection, a selection marker and local model readout. **2D atlas** provides the same geography without 3D graphics; it is also the automatic fallback when WebGL is unavailable. Selected coordinates and up to 20 named sites are saved with the report. Save, rename, revisit and remove sites in Cartography; they survive browser history restoration, file export/import and new public-share snapshots.
-
-New worlds use `cartography-2`: a continuous spherical elevation field with bounded finer noise. The 512×256 canonical atlas calibrates area-weighted ocean/ice coverage; it no longer supplies square terrain cells for arbitrary-coordinate samples. Globe materials, elevation meshes, local conditions and regional image references evaluate the same versioned field. A worker prepares a 1024×512 global texture and refines selected regions on demand with a 768×768 material texture and 192×192-segment spherical mesh. The finer layer fades into the global view; no map downloads or paid calls occur. Gas worlds remain atmospheric reference spheres, and dense atmospheres obscure their substrate. Illumination remains a fixed illustrative epoch.
-
-This is an experimental instrument: older AI illustrations and the original surface template may have different geography. Newly generated orbital images use a rendered reference from the saved globe. Coordinate-based AI expeditions are available as explicit actions; coarse globe-to-terrain descent is available; fine terrain streaming is not implemented. The coarse atlas, terrain heights, moisture, local climate and geology are artistic approximations; no plate evolution or local weather is simulated. New reports use format v4 and persist a `cartography` record (schema version 1) containing algorithm version, seed, canonical resolution, physical-parameter key and a frozen environmental estimate snapshot. Saved `cartography-1` worlds retain their unchanged geography, sites and image associations. Legacy v2 report envelopes without identities migrate to v1; v3+ identities remain mandatory. New worlds use v2 rather than silently upgrading saved worlds. V3+ reports require their saved identity, preventing accidental loss from being treated as a new world. Older clients reject v4 rather than silently stripping expedition results. The historical localStorage key is retained to migrate existing on-device history. Selected coordinates and named sites are validated on imports and server-side sharing; sites are tied to their model identity. Unsupported versions or mismatched identities are rejected rather than silently regenerated. Do not change `cartography-1` generation semantics without introducing a new version and a migration strategy. The v1 phase approximation is retained as a versioned shared primitive.
-
-Globe exploration and local model notes make no paid AI requests; expedition images and AI notes require separate explicit actions. Starting another survey while Cartography is selected also skips automatic image/interpretation calls. Starting a survey through the default Illustrations instrument retains the existing generation flow; switching instruments does not cancel jobs already started there. For a provider-free first visit, open the reference world, select Cartography, then adjust parameters and initiate a survey.
-
-Three.js is the only new runtime dependency, pinned in npm. Build and development scripts copy the required ESM files and license into ignored, same-origin `assets/vendor/`; no CDN or React is used. The current unbundled vendor modules total approximately 418KiB gzip, fetched only on first 3D activation. A later focused production bundle can reduce this without changing the application architecture. A local Node measurement prepared the global atlas in approximately 228ms and colors in 145ms; these are development-machine observations, not mobile performance guarantees. Real iPhone Safari and sustained GPU/memory profiling remain necessary.
-
-Saving, renaming or removing sites, or changing the selected location, invalidates the current public-link association. Create a new public link to include the changes; older links keep their original snapshot. Edited reference reports use a report snapshot rather than the static sample link. Site names and coordinates are public when included in a public report. Imported world snapshots contain modeled estimates, not authenticated catalogue observations; snapshots and seed checks provide reproducibility and consistency, not cryptographic scientific provenance. Atlas bytes are regenerated locally, not added to localStorage or uploads.
-
-### Location-specific expeditions
-
-In Cartography, tap a place on the globe and choose **Generate a view**. Saving a place, entering coordinates and setting a camera direction are optional. **Describe this place** generates AI notes. The default direction is north; **View direction · optional** exposes the existing heading control. **More controls and saved places · optional** contains coordinate entry, named-site management and additional globe controls. **About this place** exposes the scientific readout. These are separate paid-provider operations using existing service quotas; nothing is generated just by selecting a location. The server reconstructs the pinned world and derives local constraints itself. Day/night light follows the globe's illustrative epoch. Gas worlds produce atmospheric views. The original global surface template remains separate; new orbital images use globe conditioning as described below.
-
-Results are saved by world, coordinates, heading, art mode and prompt version, with at most eight expeditions per report. Revisit them through Saved expeditions or a matching named site. Cached results survive refresh, export/import and new public links. Image load failures have a free reload; retries after provider failures remain explicit generation requests. Expand the expedition image to download that exact result. Changing the report after publication requires a new public snapshot.
-
-New expedition images receive a server-rendered 512×512 regional PNG from the same versioned geography as the globe (continuous samples for v2; the frozen atlas for v1), with a center cross and heading ray. The north-up azimuthal map spans six angular degrees from center to each edge, including across poles and the dateline. A single OpenAI image-edit request uses that reference plus the local environmental prompt; no reference upload is stored and there is no second generation or automatic fallback request. The existing model, output quality and quotas are retained. Reference input adds image-input processing cost. This is coarse regional guidance: exact coastlines, mountain silhouettes and biological appearance remain unverified and are not guaranteed. Distant mapped terrain must not be forced into a ground-level view. Existing cached expeditions remain unchanged and are not automatically regenerated. The feature was verified with mocked provider responses and storage; no live output-quality claim is made. Publicly shared image references carry a signed association with their expedition key. Report JSON uses format v4; reports may be up to 100KB, while generation requests remain capped at 24KB.
-
-### Public experience and submission review
-
-Cartography is paused and hidden by default while the core survey and illustration experience is prepared for submission. The public interface does not expose the instrument tabs or “View on globe” and does not load the 3D renderer. Saved geography and expeditions remain intact; orbital image generation keeps its deterministic reference conditioning. Developers can enable the retained experiment for the current browser tab with `sessionStorage.setItem("psu7-cartography-preview", "1")` and reload; remove that key to disable it.
-
-See [the Awwwards preparation review](docs/AWWWARDS_REVIEW.md) for application findings and [the sourced submission strategy](docs/AWWWARDS_STRATEGY.md) for verified rules, ranked improvements and acceptance criteria. The next priority is a curated reference experience with complete, consistent orbital/surface pairs and a physical-device/live-generation rehearsal.
-
-### Regional terrain exploration
-
-In Cartography, select a coordinate or saved site and choose **Explore terrain**. The same globe becomes a closer, oblique regional view; drag to tilt/orbit, pinch or use +/− to zoom, and select locations on the visible mesh. **Center on site** recenters the selected location; **Return to orbit** or zooming outward restores global navigation. Zooming inward from orbit also enters the region at the center of the view. The explicit descent/return transition respects reduced motion. The 2D atlas remains available without WebGL.
-
-The mesh samples the saved version's shared elevation/phase model. A separately versioned, deterministic display layer (`surface-detail-1`) adds imagined ridges, rock outcrops and fine material variation around the regional estimate. It uses spherical domain-warped noise, keeps land above the shared basin datum, bounds relief with gravity and preserves saved v1/v2 coastlines, environmental calculations, identities and expedition keys. Water and ice basins remain flat. Readouts show the unexaggerated regional elevation estimate; fine relief is explicitly artistic, not calculated geology. New expedition prompts receive the same kind of fine-relief description, without promising exact landmark agreement.
-
-Relief is exaggerated 4× and capped at 1.2% of planet radius. Terrain mode begins closer to the selected site; zoom requests progressively smaller worker-built patches (12°, 4°, 1°, 0.25° or 0.0625° from center to edge), each with a 192×192-segment mesh and 768×768 color, bump and specular textures. The selected coordinate remains the patch center. This is one bounded regional patch with zoom-dependent resolution, not a streamed tile pyramid. Navigation keeps the previous patch while a replacement builds; stale jobs are discarded and only one latest request is queued. GPU resources are disposed on replacement, exit and teardown. Both saved geography versions receive display detail without upgrading their underlying model.
-
-Navigation requires no paid calls, map downloads or new dependencies. The atmospheric shell is hidden during descent; local sky/weather scattering, vegetation geometry, erosion and ground-level navigation are not simulated. Gas worlds and pressures above 10 bar disable terrain descent. No photographic detail or exact match to AI imagery is claimed. Browser tests cover refinement, portrait/landscape layouts, accessible controls, orbital return and clean WebGL rendering in Chromium emulation; physical iPhone/Safari verification remains outstanding.
-
-### Globe-guided orbital images
-
-New orbital images use the saved world identity (v1 or v2) to render a 768×512 perspective globe on the server, then send it in one OpenAI image-edit request. The reference shares the globe's geography/material sampler and fixed sun direction. The prompt replaces the old independent continental recipe with instructions to preserve the visible hemisphere, coastlines, ocean/ice distribution, planetary framing and illumination while adding photographic detail. The model remains `gpt-image-1`, with medium-quality 1536×1024 WebP output; orbital conditioning uses high input fidelity, adding image-input processing cost. Surface illustrations keep their existing generation request, and expeditions keep their regional-reference request. No paid vision check, second image request, automatic regeneration or new dependency is added.
-
-Choose **View on globe** below a newly generated orbital image to open its reference perspective. The initial camera is fixed at latitude 15°, longitude −80°, distance 4.2 planetary radii, vertical FOV 36° and 3:2 framing, with north up. Camera selection is intentionally automatic; there is no extra setup step. Navigation restores the normal responsive globe frame. WebGL failure opens the same world's 2D atlas without claiming a matching 3D perspective. Older images lack this link and remain untouched; start another survey to generate a new globe-guided orbital image.
-
-Orbital assets retain optional versioned `globeView` metadata and a separate HMAC binding their URL to that geographic identity/camera. Export/import, refresh and sharing preserve it. Public report validation rejects camera/world swaps; local imports validate structure/world agreement without authenticating server signatures. Reports remain v4, and pre-feature clients may retain the image while dropping this optional view metadata. The renderer uses a sphere and simple illustrative lighting/limb shading, not the browser's exact GPU shaders or exaggerated terrain silhouette. AI output may still alter coastlines, cloud cover or lighting: the procedural globe remains authoritative, and rough visual fidelity requires live evaluation.
+- [Reference](docs/REFERENCE.md): deployment, quotas, report format, cartography experiment
+- [Operations](docs/OPERATIONS.md): cost ceiling, firewall rules, takedowns, key rotation, live evals
+- [Showcase collection](docs/SHOWCASE_COLLECTION.md) and [planetary cartography](docs/PLANETARY_CARTOGRAPHY.md)
+- [Archive](docs/archive/): earlier Awwwards submission planning

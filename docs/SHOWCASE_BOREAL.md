@@ -4,9 +4,9 @@ Updated 21 October 2026. Open `/?sample=boreal` to explore both bundled perspect
 
 ## Scientific starting point
 
-`sampleReport()` remains the source for the scenario and its numerical estimates. Boreal assumes a Sun-like star, outer habitable-zone orbit (1.4 AU), Earth mass and radius, 1 bar nitrogen/oxygen atmosphere, 85% water/ice inventory, 23° tilt and 24-hour rotation. The showcase now explicitly assumes no biosphere. The unchanged physics model estimates approximately −25°C mean temperature and favors ice. Local weather, glacier geometry and geological processes are not simulated.
+`sampleReport()` remains the source for the scenario and its numerical estimates. Boreal assumes a Sun-like star, outer habitable-zone orbit (1.4 AU), Earth mass and radius, 1 bar nitrogen/oxygen atmosphere, 85% water/ice inventory, 23° tilt and 24-hour rotation. The showcase now explicitly assumes no biosphere. Under `physics-2` the ice-covered basins raise the Bond albedo to about 0.51, and the model estimates approximately −43°C mean temperature and favors ice (it was −25°C under `physics-1`, which used the atmosphere's 0.3 albedo for every world). Local weather, glacier geometry and geological processes are not simulated.
 
-The field note explains the roughly halved stellar flux and distinguishes modeled conditions from imagined scenery. Older saved Boreal reports with familiar-biosphere assumptions retain their parameters and cartography identity when restored; they are no longer treated as the current static showcase link.
+The field note is hand-written (shown as a curated reference note), tagged section by section as assumed, calculated, estimated or imagined. It also serves as a few-shot example in `lib/prompts.js`, and `tests/provenance.test.js` checks every temperature it quotes against the model. Older saved Boreal reports with familiar-biosphere assumptions retain their parameters and cartography identity when restored; they are no longer treated as the current static showcase link.
 
 ## Illustration provenance and direction
 

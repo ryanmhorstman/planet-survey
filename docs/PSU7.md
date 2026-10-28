@@ -10,7 +10,7 @@
 - `tests/image-prompts.test.js`: eight fixed scenarios, procedural diversity, reproducibility across object order and art mode, interpretation evidence requirements, unchanged rubric weighting, phase extremes and opt-in review checks.
 - `tests/browser.mjs`: narrow landscape viewports, lightbox viewport containment and forward/reverse focus trapping, alongside existing accessibility, error recovery, request deduplication and layout-shift checks.
 - `scripts/image-quality-review.js`: disabled-by-default offline manual review checklist. No production import, vision calls or automatic regeneration.
-- `README.md`: model domains, score exclusions, review usage and limitations.
+- `docs/REFERENCE.md`: model domains, score exclusions, review usage and limitations.
 
 ## Validation
 

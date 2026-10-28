@@ -5,8 +5,9 @@ import {
   prepareExpedition,
   expeditionContext,
   expeditionImagePrompt,
-  expeditionAnalysisPrompt,
 } from "../lib/expedition.js";
+import { expeditionNoteRequest } from "../lib/prompts.js";
+import { verifyExpeditionNotes } from "../lib/provenance.js";
 import {
   expeditionMetadata,
   validateExpeditions,
@@ -62,12 +63,13 @@ test("expedition prompts reconstruct both views of local conditions for eight wo
     const p = prepareExpedition(payload(changes)),
       context = expeditionContext(p),
       prompt = expeditionImagePrompt(p, context),
-      notes = expeditionAnalysisPrompt(p, context);
+      notes = expeditionNoteRequest(p, context);
     assert.match(prompt, /Heading 90/);
     assert.ok(prompt.includes(context.local.surface));
     assert.match(prompt, /No moons, rings/);
     assert.match(prompt, /Exact coastlines and landmarks are not guaranteed/);
-    assert.match(notes, /No observation, detection, measurement or telemetry/);
+    assert.match(notes.system[0].text, /Never write "detected", "observed"/);
+    assert.ok(notes.messages[0].content.includes(JSON.stringify(context)));
     for (let n = 1; n <= 7; n++) assert.ok(prompt.includes(`${n}. `));
     if (changes.atmosphere?.includes("none"))
       assert.match(prompt, /Black sky, no clouds or atmospheric haze/);
@@ -157,7 +159,8 @@ test("provider operations share existing quota scopes, release failures and bind
           return { data: [{ b64_json: "encoded" }] };
         }
         const sent = JSON.parse(options.body);
-        assert.match(sent.messages[0].content, /selected coordinate/);
+        assert.match(sent.system[0].text, /picked one coordinate/);
+        assert.match(sent.messages[0].content, /<local_sample>/);
         return {
           stop_reason: "end_turn",
           content: [{ type: "text", text: JSON.stringify(narrative) }],
@@ -177,7 +180,15 @@ test("provider operations share existing quota scopes, release failures and bind
       { method: "POST", body: { ...payload(), operation: "notes" } },
       notes,
     );
-    assert.deepEqual(notes.body.narrative, narrative);
+    const { signature, ...written } = notes.body.narrative;
+    assert.deepEqual(written, narrative);
+    assert.ok(
+      verifyExpeditionNotes(notes.body.metadata.key, notes.body.narrative),
+    );
+    assert.ok(
+      !verifyExpeditionNotes("another expedition", notes.body.narrative),
+    );
+    assert.match(signature, /^[a-f0-9]{64}$/);
     assert.deepEqual(scopes, ["image", "analyze"]);
     assert.equal(calls, 2);
     assert.equal(releases, 2);

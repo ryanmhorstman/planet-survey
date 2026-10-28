@@ -6,9 +6,9 @@ import {
   geographySpec,
   visualSpec,
   imagePrompt,
-  analysisPrompt,
   waterState,
 } from "../lib/planet.js";
+import { fieldNoteRequest, FIELD_NOTE_SYSTEM } from "../lib/prompts.js";
 const fixtures = {
   temperate: {},
   highGravity: { massEarth: 1.63, radiusEarth: 1.039, biosphere: "alien" },
@@ -73,19 +73,29 @@ test("geography provides procedural diversity and positive fictional arrangement
   assert.ok(layouts.size > 80);
 });
 test("interpretation prompt separates catalogue evidence, assumptions and imagined scenery", () => {
-  const prompt = analysisPrompt(DEFAULTS, calculate(DEFAULTS), {
+  const catalog = {
     pl_name: "Example b",
+    hostname: "Example",
     pl_eqt: 260,
-  });
-  assert.match(
-    prompt,
-    /No actual observation, detection, measurement or acquired telemetry/,
-  );
-  assert.match(
-    prompt,
-    /attribute supplied catalogue measurements to the catalogue/,
-  );
-  assert.match(prompt, /catalogue equilibrium temperatures are estimates/);
+  };
+  const request = fieldNoteRequest(
+      DEFAULTS,
+      calculate(DEFAULTS, catalog),
+      catalog,
+    ),
+    facts = request.messages[0].content;
+  assert.equal(request.system[0].text, FIELD_NOTE_SYSTEM);
+  assert.deepEqual(request.system[0].cache_control, { type: "ephemeral" });
+  assert.equal(request.output_config.format.type, "json_schema");
+  assert.match(FIELD_NOTE_SYSTEM, /Never write "detected", "observed"/);
+  assert.match(FIELD_NOTE_SYSTEM, /NASA Exoplanet Archive/);
+  // Curated reference notes are the few-shot examples.
+  for (const world of ["boreal", "cinder", "viridia"])
+    assert.ok(FIELD_NOTE_SYSTEM.includes(`<example world="${world}">`));
+  assert.match(facts, /World: Example b, a confirmed exoplanet/);
+  assert.match(facts, /equilibrium temperature 260 K \(archive estimate\)/);
+  // The fact sheet carries no hedged art-direction prose or raw model JSON.
+  assert.doesNotMatch(facts, /not inferred biology|"warnings"/);
 });
 test("gravity does not silently alter the surface rubric; ESI remains distinct", () => {
   const earth = calculate(DEFAULTS),

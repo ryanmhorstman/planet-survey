@@ -3,8 +3,13 @@ import {
   expeditionContext,
   expeditionModel,
   expeditionImagePrompt,
-  expeditionAnalysisPrompt,
 } from "../lib/expedition.js";
+import {
+  expeditionNoteRequest,
+  parseExpeditionNote,
+  anthropicHeaders,
+} from "../lib/prompts.js";
+import { verifiedCatalog, signExpeditionNotes } from "../lib/provenance.js";
 import { regionalReference } from "../lib/regional-reference.js";
 import { expeditionNarrative } from "../lib/expedition-record.js";
 import {
@@ -27,6 +32,7 @@ export function createExpeditionHandler({
     try {
       const prepared = prepareExpedition(body(req)),
         image = prepared.operation === "image";
+      verifiedCatalog(prepared.catalog);
       const key = image
         ? process.env.OPENAI_API_KEY || process.env.PLANET_OPENAI_KEY
         : process.env.ANTHROPIC_API_KEY;
@@ -86,48 +92,24 @@ export function createExpeditionHandler({
         "https://api.anthropic.com/v1/messages",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": key,
-            "anthropic-version": "2023-06-01",
-          },
-          body: JSON.stringify({
-            model: "claude-sonnet-4-5",
-            max_tokens: 800,
-            messages: [
-              {
-                role: "user",
-                content: expeditionAnalysisPrompt(prepared, context),
-              },
-            ],
-          }),
+          headers: anthropicHeaders(key),
+          body: JSON.stringify(expeditionNoteRequest(prepared, context)),
         },
-        24000,
+        30000,
       );
-      let narrative;
+      let notes;
       try {
-        if (
-          response.stop_reason !== "end_turn" ||
-          !Array.isArray(response.content)
-        )
-          throw new Error();
-        narrative = expeditionNarrative(
-          JSON.parse(
-            response.content
-              .filter((item) => item.type === "text")
-              .map((item) => item.text)
-              .join("")
-              .trim()
-              .replace(/^```(?:json)?\s*|\s*```$/g, ""),
-          ),
-        );
-      } catch {
+        notes = expeditionNarrative(parseExpeditionNote(response));
+      } catch (error) {
+        if (error instanceof ServiceError) throw error;
         throw new ServiceError(
           502,
           "The expedition notes were incomplete or invalid. Please retry.",
           "INVALID_RESPONSE",
         );
       }
+      // Signed so a public report can keep these notes with their expedition.
+      const narrative = signExpeditionNotes(prepared.metadata.key, notes);
       return res.status(200).json({ metadata: prepared.metadata, narrative });
     } catch (error) {
       return fail(res, error);

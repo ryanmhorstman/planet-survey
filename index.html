@@ -282,7 +282,9 @@
           </section>
           <dl class="stats-row" aria-label="Estimated planetary properties">
             <div class="stat">
-              <dt class="stat-label">Mean temperature · estimate</dt>
+              <dt class="stat-label" id="tempLabel">
+                Mean temperature · estimate
+              </dt>
               <dd class="stat-value" id="statTemp"></dd>
             </div>
             <div class="stat">
@@ -311,7 +313,7 @@
             </div>
             <div class="stat">
               <dt class="stat-label">Biosphere</dt>
-              <dd class="stat-value">Not established</dd>
+              <dd class="stat-value" id="statBiosphere"></dd>
             </div>
           </dl>
           <section class="hab-section" aria-labelledby="suitabilityTitle">
@@ -660,7 +662,9 @@
           <button class="randomize-btn" id="randomizeBtn" type="button">
             ⚄ Randomize scenario</button
           ><button class="randomize-btn" id="browseBtn" type="button">
-            ◉ Browse NASA worlds
+            ◉ Browse NASA worlds</button
+          ><button class="randomize-btn" id="researchBtn" type="button" hidden>
+            ◇ Ask the field researcher
           </button>
         </div>
       </aside>
@@ -759,6 +763,51 @@
         <button class="text-btn" id="browseRetry" type="button" hidden>
           Retry catalogue request
         </button>
+      </div>
+    </dialog>
+    <dialog
+      class="browse-modal research-modal"
+      id="researchModal"
+      aria-labelledby="researchTitle"
+    >
+      <div class="browse-inner">
+        <header class="browse-header">
+          <h2 class="browse-title" id="researchTitle">
+            Field researcher // Claude
+          </h2>
+          <button
+            class="dialog-close"
+            type="button"
+            data-close="researchModal"
+            aria-label="Close field researcher"
+          >
+            ✕
+          </button>
+        </header>
+        <p class="catalog-note">
+          Describe what to look for. Claude searches the NASA catalogue and runs
+          the physics model in your browser, compares candidates, then writes up
+          one world. Every step appears below.
+        </p>
+        <form class="browse-search-row" id="researchForm">
+          <label class="sr-only" for="researchBrief">Survey brief</label
+          ><input
+            class="browse-search"
+            id="researchBrief"
+            maxlength="600"
+            minlength="3"
+            required
+            placeholder="A NASA world around a red dwarf that could keep liquid water"
+          /><button class="browse-search-btn" id="researchRun" type="submit">
+            Survey
+          </button>
+        </form>
+        <p id="researchStatus" class="browse-status" role="status"></p>
+        <ol
+          class="research-log"
+          id="researchLog"
+          aria-label="Researcher log"
+        ></ol>
       </div>
     </dialog>
     <dialog class="lightbox" id="lightbox" aria-labelledby="lightboxTitle">

@@ -14,6 +14,7 @@ for (const name of [
   "reports",
   "capabilities",
   "expedition",
+  "agent",
 ])
   handlers[`/api/${name}`] = (await import(`../api/${name}.js`)).default;
 const types = {
@@ -42,12 +43,17 @@ http
       if (handlers[url.pathname]) {
         req.query = Object.fromEntries(url.searchParams);
         // Match a trusted edge's forwarded address; clients cannot spoof quotas locally.
+        req.headers["x-real-ip"] = req.socket.remoteAddress;
         req.headers["x-forwarded-for"] = req.socket.remoteAddress;
         let bytes = 0,
           chunks = [];
         for await (const chunk of req) {
           bytes += chunk.length;
-          if (bytes > (url.pathname === "/api/reports" ? 100000 : 24000))
+          if (
+            bytes >
+            ({ "/api/reports": 100000, "/api/agent": 64000 }[url.pathname] ??
+              24000)
+          )
             return res.status(413).json({ error: "Request is too large." });
           chunks.push(chunk);
         }
@@ -81,6 +87,8 @@ http
           "lib/terrain.js",
           "lib/terrain-detail.js",
           "lib/region.js",
+          "lib/agent-tools.js",
+          "lib/field-researcher.js",
           "assets/vendor/three.core.js",
           "assets/vendor/three.module.js",
           "assets/vendor/OrbitControls.js",

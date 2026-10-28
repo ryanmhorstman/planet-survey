@@ -10,11 +10,14 @@
     "dev": "node --env-file-if-exists=.env.local scripts/dev-server.js",
     "test": "node --test tests/*.test.js",
     "test:browser": "node tests/browser.mjs",
-    "check": "node --check app.js && node --check lib/planet.js && node --check lib/server.js && node --check lib/geography.js && node --check lib/globe.js && node --check lib/geography-worker.js && node --check lib/cartography-record.js && node --check lib/water-phase.js && node --check api/expedition.js && node --check lib/expedition.js && node --check lib/expedition-record.js && node --check lib/regional-reference.js && node --check lib/terrain-detail.js && node --check lib/terrain.js && node --check lib/region.js && node --check lib/orbital-record.js && node --check lib/orbital-reference.js && node --check lib/png.js",
+    "check": "node scripts/check-syntax.js",
     "build": "node scripts/build.js",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "npm run format:check"
+    "lint": "npm run format:check",
+    "typecheck": "tsc -p .",
+    "eval": "node scripts/eval-narratives.js --curated",
+    "eval:live": "node --env-file-if-exists=.env.local scripts/eval-narratives.js --live 40"
   },
   "dependencies": {
     "@vercel/blob": "2.8.2",
@@ -22,8 +25,10 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
+    "@types/node": "24.10.1",
     "playwright-core": "1.64.1",
     "prettier": "3.9.10",
+    "typescript": "5.9.3",
     "undici": "6.29.1"
   }
 }

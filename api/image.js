@@ -17,8 +17,8 @@ import {
   orbitalImagePrompt,
 } from "../lib/orbital-reference.js";
 import { validateCartography } from "../lib/cartography-record.js";
-import { storeOrbitalImage } from "../lib/storage.js";
-import { storeImage } from "../lib/storage.js";
+import { storeImage, storeOrbitalImage } from "../lib/storage.js";
+import { verifiedCatalog } from "../lib/provenance.js";
 
 export function createImageHandler({
   request = providerJSON,
@@ -34,8 +34,9 @@ export function createImageHandler({
         survey = Object.fromEntries(
           Object.entries(input).filter(([key]) => key !== "cartography"),
         ),
-        { params, catalog } = validateSurvey(survey),
-        physics = calculate(params, catalog);
+        { params, catalog, physicsVersion } = validateSurvey(survey),
+        physics = calculate(params, catalog, physicsVersion);
+      verifiedCatalog(catalog);
       let cartography;
       try {
         cartography = validateCartography(input.cartography, params, physics);

@@ -15,9 +15,11 @@ test("production build emits absolute social metadata and only public files", as
     );
     assert.match(html, /rel="canonical" href="https:\/\/survey.example\/"/);
     assert.deepEqual((await readdir(join(dir, "lib"))).sort(), [
+      "agent-tools.js",
       "cartography-record.js",
       "client-report.js",
       "expedition-record.js",
+      "field-researcher.js",
       "geography-worker.js",
       "geography.js",
       "globe.js",

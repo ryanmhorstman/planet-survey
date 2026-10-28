@@ -1,4 +1,5 @@
-import { validateCatalog, InputError } from "../lib/planet.js";
+import { InputError, validateCatalog } from "../lib/planet.js";
+import { signCatalog } from "../lib/provenance.js";
 import { method, fail, providerJSON, ServiceError } from "../lib/server.js";
 const cache = new Map();
 const filters = {
@@ -48,11 +49,18 @@ export default async function handler(req, res) {
         "The catalogue returned an unexpected response. Please retry.",
         "INVALID_RESPONSE",
       );
+    // Signed so later requests can attribute these values to the NASA archive.
     const planets = rows.flatMap((row) => {
+      let record;
       try {
-        return [validateCatalog(row)];
+        record = validateCatalog(row);
       } catch {
         return [];
+      }
+      try {
+        return [signCatalog(record)];
+      } catch {
+        return [record];
       }
     });
     if (rows.length && !planets.length)
