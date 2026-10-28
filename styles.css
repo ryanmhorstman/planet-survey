@@ -1787,6 +1787,26 @@ progress::-moz-progress-bar {
   min-height: 0;
   white-space: pre-line;
 }
+.note-section {
+  display: block;
+}
+.note-section + .note-section {
+  margin-top: 0.45em;
+}
+.note-kind {
+  display: inline-block;
+  min-width: 7.5em;
+  margin-right: 0.4em;
+  font-family: "Space Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  vertical-align: 0.35em;
+  color: var(--gold);
+}
+.note-kind[data-kind="imagined"] {
+  color: var(--ink-soft);
+}
 .analysis-section .request-status {
   padding: 12px 0 0;
   background: transparent;

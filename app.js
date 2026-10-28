@@ -279,7 +279,37 @@ const post = (url, value, timeout) =>
     timeout,
   );
 function reportBody(r) {
-  return { params: r.params, catalog: r.catalog };
+  return {
+    params: r.params,
+    catalog: r.catalog,
+    physicsVersion: r.physicsVersion,
+  };
+}
+const SECTION_LABELS = {
+  calculated: "Calculated",
+  estimated: "Estimated",
+  assumed: "Assumed",
+  imagined: "Imagined",
+};
+// Tagged sections carry provenance in the interface, so the prose stays plain.
+function renderNarrative(narrative) {
+  const body = $("analysisBody");
+  if (!narrative.sections) {
+    body.textContent = narrative.description;
+    return;
+  }
+  body.replaceChildren(
+    ...narrative.sections.map((section) => {
+      const line = document.createElement("span"),
+        tag = document.createElement("span");
+      line.className = "note-section";
+      tag.className = "note-kind";
+      tag.dataset.kind = section.kind;
+      tag.textContent = SECTION_LABELS[section.kind];
+      line.append(tag, " ", section.text);
+      return line;
+    }),
+  );
 }
 function renderHistory() {
   const container = $("historyItems");
@@ -455,6 +485,10 @@ function render() {
   $("planetNameDisplay").textContent = r.name;
   $("planetClassDisplay").textContent = f.classification;
   $("statTemp").textContent = `${format(f.temperatureC, 0)}°C`;
+  $("tempLabel").textContent =
+    f.temperatureKind === "equilibrium"
+      ? "Equilibrium temperature · upper bound"
+      : "Mean temperature · estimate";
   $("statGravity").textContent = `${format(f.gravityG)} g`;
   $("statEscape").textContent = `${format(f.escapeKms)} km/s`;
   $("yearSource").textContent =
@@ -480,12 +514,13 @@ function render() {
       return li;
     }),
   );
-  $("analysisBody").textContent = r.narrative.description;
-  $("narrativeKind").textContent = r.sample
-    ? "Reference field note · imagined scenery"
-    : r.narrativeKind === "ai"
-      ? "AI-written interpretation · imagined scenery"
-      : "Model field note · imagined scenery";
+  renderNarrative(r.narrative);
+  $("narrativeKind").textContent =
+    r.sample || r.narrativeKind === "reference"
+      ? "Curated reference note · hand-written from the model estimates"
+      : r.narrativeKind === "ai"
+        ? "AI-written field note · imagined scenery"
+        : "Model field note · imagined scenery";
   $("analysisStatus").textContent =
     rt.analysis === "pending"
       ? "Writing an interpretation. The model report is available now."
@@ -513,13 +548,16 @@ function render() {
   );
   addFact(
     "Temperature",
-    `${f.temperatureSource}. Greenhouse offset: ${format(f.greenhouseK)} K. Weather and regional extremes are not resolved.`,
+    `${f.temperatureSource}${f.albedo == null ? "" : `; Bond albedo ${format(f.albedo)} (${f.albedoSource})`}. Greenhouse offset: ${format(f.greenhouseK)} K. ${f.airlessMeanRangeC ? `With no atmosphere, the mean surface temperature lies between about ${format(f.airlessMeanRangeC[0], 0)}°C (slow rotation) and ${format(f.airlessMeanRangeC[1], 0)}°C (fast rotation or high thermal inertia). ` : ""}Weather and regional extremes are not resolved.`,
   );
   addFact(
     "Environment assumptions",
     `${p.atmosphere}; ${format(p.pressureBar)} bar; ${p.water}% water/ice inventory; ${p.tilt}° tilt`,
   );
   const biology = biosphereSpec(p, f);
+  $("statBiosphere").textContent = biology.present
+    ? "Imagined · not established"
+    : "None depicted";
   addFact(
     "Imagined biosphere",
     `${p.biosphere.charAt(0).toUpperCase() + p.biosphere.slice(1)} mode. ${biology.present ? `${biology.palette}; ${biology.forms}. Artistic choices, not detected life.` : biology.reason}`,

@@ -1047,7 +1047,7 @@ try {
     const exported = JSON.parse(
       await readFile(await (await exportedDownload).path(), "utf8"),
     );
-    assert.equal(exported.version, 4);
+    assert.equal(exported.version, 5);
     assert.equal(exported.expeditions[0].heading, 90);
     const importedCtx = await context({}, true),
       imported = await importedCtx.newPage();

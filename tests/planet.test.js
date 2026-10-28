@@ -263,9 +263,12 @@ test("mild land-and-water worlds include consistent imagined vegetation in both 
       assert.match(prompt, /^Create an ORIGINAL EXOPLANET/);
       assert.match(prompt, /do not merely rotate or recolor an Earth globe/);
     }
-    assert.match(
-      createReport({ params }).narrative.description,
-      /not evidence of life/,
+    const note = createReport({ params }).narrative;
+    assert.ok(
+      note.sections.some(
+        (section) =>
+          section.kind === "imagined" && /fernlike/.test(section.text),
+      ),
     );
   }
 });
@@ -367,7 +370,12 @@ test("curated Boreal has two safe bundled views and an explicitly mineral enviro
   const r = sampleReport();
   assert.equal(r.params.biosphere, "none");
   assert.equal(r.physics.waterState, "Ice favored");
-  assert.ok(Math.abs(r.physics.temperatureC + 25) < 1);
+  // physics-2 brightens ice-covered basins; physics-1 used the atmosphere's 0.3.
+  assert.ok(Math.abs(r.physics.temperatureC + 43.5) < 1);
+  assert.ok(Math.abs(r.physics.albedo - 0.5125) < 1e-9);
+  assert.ok(
+    Math.abs(calculate(r.params, null, "physics-1").temperatureC + 25) < 1,
+  );
   for (const view of ["orbital", "surface"]) {
     assert.deepEqual(safeAsset(r.images[view]), r.images[view]);
     assert.deepEqual(

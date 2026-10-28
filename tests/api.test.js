@@ -5,6 +5,7 @@ import { createImageHandler } from "../api/image.js";
 import exoplanets, { catalogQuery } from "../api/exoplanets.js";
 import capabilityHandler from "../api/capabilities.js";
 import { DEFAULTS } from "../lib/planet.js";
+import { CLAUDE_MODEL } from "../lib/prompts.js";
 import { capabilities, reserve, quotaConfig } from "../lib/server.js";
 
 const saved = { ...process.env },
@@ -51,8 +52,11 @@ const res = () => ({
     return this;
   },
 });
-const narrative = {
-  description: "An imagined ocean world, based on the model assumptions.",
+const structured = {
+  sections: [
+    { kind: "estimated", text: "The energy balance settles near 15 °C." },
+    { kind: "imagined", text: "Dark seas break against exposed stone." },
+  ],
   surfaceFeatures: "Dark seas and exposed stone.",
 };
 test("validation rejects custom and missing prompts before any upstream work", async () => {
@@ -79,7 +83,23 @@ test("upstream authorization failures do not become HTTP 200 or expose provider 
 test("analysis rejects malformed and truncated responses; valid interpretation carries no model score", async () => {
   for (const upstream of [
     { stop_reason: "max_tokens", content: [] },
+    { stop_reason: "refusal", content: [] },
     { stop_reason: "end_turn", content: [{ type: "text", text: "{}" }] },
+    {
+      stop_reason: "end_turn",
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            sections: [
+              { kind: "rumoured", text: "x" },
+              { kind: "imagined", text: "y" },
+            ],
+            surfaceFeatures: "z",
+          }),
+        },
+      ],
+    },
   ]) {
     globalThis.fetch = async () => Response.json(upstream);
     const response = res();
@@ -91,14 +111,26 @@ test("analysis rejects malformed and truncated responses; valid interpretation c
     sent = JSON.parse(options.body);
     return Response.json({
       stop_reason: "end_turn",
-      content: [{ type: "text", text: JSON.stringify(narrative) }],
+      content: [
+        { type: "thinking", thinking: "", signature: "opaque" },
+        { type: "text", text: JSON.stringify(structured) },
+      ],
     });
   };
   const response = res();
   await analyze(req({ params: DEFAULTS }), response);
   assert.equal(response.statusCode, 200);
-  assert.deepEqual(response.body, { narrative });
-  assert.match(sent.messages[0].content, /not authoritative observations/);
+  const { signature, ...note } = response.body.narrative;
+  assert.deepEqual(note, {
+    description: structured.sections.map((s) => s.text).join(" "),
+    surfaceFeatures: structured.surfaceFeatures,
+    sections: structured.sections,
+  });
+  assert.match(signature, /^[a-f0-9]{64}$/);
+  assert.equal(sent.model, CLAUDE_MODEL);
+  assert.equal(sent.fallbacks, "default");
+  assert.equal(sent.output_config.format.type, "json_schema");
+  assert.match(sent.messages[0].content, /^<fact_sheet>/);
 });
 test("provider timeouts are actionable and quota releases execute on failure", async () => {
   let released = 0;
