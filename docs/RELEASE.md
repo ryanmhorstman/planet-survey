@@ -1,6 +1,6 @@
 # Submission rehearsal
 
-For the current public-interface review and prioritized submission gates, see [Awwwards preparation review](AWWWARDS_REVIEW.md). The checklist below records the original release rehearsal; it does not supersede the newer validation boundaries.
+For the current public-interface review and prioritized submission gates, see [Awwwards preparation review](archive/AWWWARDS_REVIEW.md). The checklist below records the original release rehearsal; it does not supersede the newer validation boundaries.
 
 The implementation is ready for a configured preview deployment. Local checks cannot establish live generation quality, production latency or compatibility with every browser.
 
