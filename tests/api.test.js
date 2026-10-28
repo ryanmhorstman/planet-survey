@@ -71,9 +71,16 @@ test("upstream authorization failures do not become HTTP 200 or expose provider 
       JSON.stringify({ error: { message: "private provider detail" } }),
       { status: 401 },
     );
-  const response = res();
-  await analyze(req({ params: DEFAULTS }), response);
-  assert.equal(response.statusCode, 502);
+  const response = res(),
+    logError = console.error;
+  console.error = () => {};
+  try {
+    await analyze(req({ params: DEFAULTS }), response);
+  } finally {
+    console.error = logError;
+  }
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.body.code, "UPSTREAM_UNAVAILABLE");
   assert.ok(!JSON.stringify(response.body).includes("private provider detail"));
 });
 test("analysis rejects malformed and truncated responses; valid interpretation carries no model score", async () => {
