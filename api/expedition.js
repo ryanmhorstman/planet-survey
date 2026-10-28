@@ -18,6 +18,7 @@ import {
   fail,
   reserve,
   providerJSON,
+  IMAGE_MODEL,
   ServiceError,
 } from "../lib/server.js";
 import { storeExpeditionImage } from "../lib/storage.js";
@@ -49,7 +50,7 @@ export function createExpeditionHandler({
       if (image) {
         const form = new FormData();
         for (const [name, value] of Object.entries({
-          model: "gpt-image-1",
+          model: IMAGE_MODEL,
           prompt: expeditionImagePrompt(prepared, context),
           n: "1",
           size: "1536x1024",

@@ -10,6 +10,7 @@ import {
   fail,
   reserve,
   providerJSON,
+  IMAGE_MODEL,
   ServiceError,
 } from "../lib/server.js";
 import {
@@ -64,7 +65,7 @@ export function createImageHandler({
           ? orbitalReference(params, physics, cartography)
           : null,
         settings = {
-          model: "gpt-image-1",
+          model: IMAGE_MODEL,
           prompt: orbital
             ? orbitalImagePrompt(
                 params,
@@ -72,7 +73,6 @@ export function createImageHandler({
                 reference.view,
               )
             : imagePrompt(params, physics, "surface"),
-          ...(orbital ? { input_fidelity: "high" } : {}),
           n: 1,
           size: "1536x1024",
           quality: "medium",
