@@ -3,6 +3,7 @@ import {
   calculate,
   imagePrompt,
   InputError,
+  validateSeed,
 } from "../lib/planet.js";
 import {
   body,
@@ -18,13 +19,15 @@ import {
   orbitalImagePrompt,
 } from "../lib/orbital-reference.js";
 import { validateCartography } from "../lib/cartography-record.js";
-import { storeImage, storeOrbitalImage } from "../lib/storage.js";
+import { storeImage, storeOrbitalImage, cachedImage } from "../lib/storage.js";
+import { imageCacheKey } from "../lib/image-cache.js";
 import { verifiedCatalog } from "../lib/provenance.js";
 
 export function createImageHandler({
   request = providerJSON,
   save = storeImage,
   saveOrbital = storeOrbitalImage,
+  lookup = cachedImage,
   quota = reserve,
 } = {}) {
   return async function handler(req, res) {
@@ -33,10 +36,13 @@ export function createImageHandler({
     try {
       const input = body(req),
         survey = Object.fromEntries(
-          Object.entries(input).filter(([key]) => key !== "cartography"),
+          Object.entries(input).filter(
+            ([key]) => !["cartography", "seed"].includes(key),
+          ),
         ),
         { params, catalog, physicsVersion } = validateSurvey(survey),
-        physics = calculate(params, catalog, physicsVersion);
+        physics = calculate(params, catalog, physicsVersion),
+        seed = input.seed == null ? null : validateSeed(input.seed);
       verifiedCatalog(catalog);
       let cartography;
       try {
@@ -59,7 +65,6 @@ export function createImageHandler({
           "Image storage is not configured yet. The model report is ready to explore.",
           "IMAGE_STORAGE_NOT_CONFIGURED",
         );
-      release = await quota(req, "image");
       const orbital = input.view === "orbital",
         reference = orbital
           ? orbitalReference(params, physics, cartography)
@@ -79,6 +84,19 @@ export function createImageHandler({
           output_format: "webp",
           output_compression: 80,
         };
+      // The prompt carries every parameter; the orbital reference view pins
+      // the globe's orientation. Same seed and prompt: reuse the image.
+      const cacheKey = imageCacheKey(seed, [
+        settings.model,
+        settings.size,
+        settings.prompt,
+        reference?.view ?? null,
+      ]);
+      const cached = orbital
+        ? await lookup(cacheKey, reference.view)
+        : await lookup(cacheKey);
+      if (cached) return res.status(200).json({ asset: cached, cached: true });
+      release = await quota(req, "image");
       let requestBody = JSON.stringify(settings);
       if (orbital) {
         requestBody = new FormData();
@@ -109,8 +127,8 @@ export function createImageHandler({
           "INVALID_RESPONSE",
         );
       const asset = orbital
-        ? await saveOrbital(data.data[0].b64_json, reference.view)
-        : await save(data.data[0].b64_json);
+        ? await saveOrbital(data.data[0].b64_json, reference.view, cacheKey)
+        : await save(data.data[0].b64_json, cacheKey);
       return res.status(200).json({ asset });
     } catch (error) {
       return fail(res, error);

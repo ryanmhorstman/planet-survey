@@ -283,16 +283,20 @@
           <dl class="stats-row" aria-label="Estimated planetary properties">
             <div class="stat">
               <dt class="stat-label" id="tempLabel">
-                Mean temperature · estimate
+                Mean temperature · estimated
               </dt>
               <dd class="stat-value" id="statTemp"></dd>
             </div>
             <div class="stat">
-              <dt class="stat-label">Surface gravity · calculated</dt>
+              <dt class="stat-label" id="gravityLabel">
+                Surface gravity · calculated
+              </dt>
               <dd class="stat-value" id="statGravity"></dd>
             </div>
             <div class="stat">
-              <dt class="stat-label">Escape velocity · calculated</dt>
+              <dt class="stat-label" id="escapeLabel">
+                Escape velocity · calculated
+              </dt>
               <dd class="stat-value" id="statEscape"></dd>
             </div>
             <div class="stat">
@@ -300,19 +304,25 @@
               <dd class="stat-value" id="statYear"></dd>
             </div>
             <div class="stat">
-              <dt class="stat-label">Solar day · estimate</dt>
+              <dt class="stat-label" id="dayLabel">Solar day · assumed</dt>
               <dd class="stat-value" id="statDay"></dd>
             </div>
             <div class="stat">
-              <dt class="stat-label">Water phase · estimate</dt>
+              <dt class="stat-label" id="waterLabel">
+                Water phase · estimated
+              </dt>
               <dd class="stat-value" id="statWater"></dd>
             </div>
             <div class="stat">
-              <dt class="stat-label">Bulk density · calculated</dt>
+              <dt class="stat-label" id="densityLabel">
+                Bulk density · calculated
+              </dt>
               <dd class="stat-value" id="statDensity"></dd>
             </div>
             <div class="stat">
-              <dt class="stat-label">Biosphere</dt>
+              <dt class="stat-label" id="biosphereLabel">
+                Biosphere · imagined
+              </dt>
               <dd class="stat-value" id="statBiosphere"></dd>
             </div>
           </dl>
@@ -329,6 +339,11 @@
               value="0"
               aria-labelledby="suitabilityTitle"
             ></progress>
+            <p
+              class="score-explanation score-caveat"
+              id="activityCaveat"
+              hidden
+            ></p>
             <p class="score-explanation">
               Temperature, water phase, pressure and atmosphere assumptions
               only. Even 100/100 does not imply Earth-like gravity,
@@ -339,7 +354,9 @@
               <ul id="scoreFactors"></ul>
               <p>
                 Temperature: 40 points; exposed liquid water: 25; pressure: 20;
-                atmosphere: 15. Airless worlds score zero. Gas envelopes have no
+                atmosphere: 15. Airless worlds score zero. A tidally locked
+                world below 0.1 bar scores zero for water and pressure, since
+                its air would freeze out on the nightside. Gas envelopes have no
                 surface score. Gravity, density, radiation, toxicity and
                 biological viability are not evaluated. Seasonal extremes,
                 atmospheric escape and geological evolution are not simulated.
@@ -369,7 +386,8 @@
               Energy balance and a pressure-scaled greenhouse offset estimate a
               mean temperature; they do not resolve weather or seasons. Stellar
               size and luminosity are representative unless catalogued. Tidal
-              state, geothermal activity and a biosphere remain unknown.
+              locking is a rough estimate; geothermal activity and a biosphere
+              remain unknown.
             </p>
             <a
               href="https://exoplanetarchive.ipac.caltech.edu/docs/API_PSCompPars_columns.html"
@@ -377,6 +395,10 @@
               rel="noopener noreferrer"
               >NASA catalogue definitions ↗</a
             >
+          </details>
+          <details class="provenance model-notes">
+            <summary id="modelNotesSummary">Model notes</summary>
+            <ul id="modelNotes"></ul>
           </details>
           <div class="action-bar visible">
             <button class="action-btn" id="shareBtn" type="button">

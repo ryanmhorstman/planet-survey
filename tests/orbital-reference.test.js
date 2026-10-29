@@ -121,6 +121,7 @@ test("orbital API makes one multipart request and saves its pinned reference met
       released = 0,
       saved;
     const handler = createImageHandler({
+      lookup: async () => null,
       quota: async () => async () => released++,
       request: async (url, options) => {
         calls++;

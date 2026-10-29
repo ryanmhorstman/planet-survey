@@ -142,6 +142,7 @@ test("analysis rejects malformed and truncated responses; valid interpretation c
 test("provider timeouts are actionable and quota releases execute on failure", async () => {
   let released = 0;
   const handler = createImageHandler({
+    lookup: async () => null,
     quota: async () => async () => {
       released++;
     },
@@ -159,6 +160,7 @@ test("provider timeouts are actionable and quota releases execute on failure", a
 test("image endpoint constructs prompts itself and stores only validated provider output", async () => {
   let sent, stored;
   const handler = createImageHandler({
+    lookup: async () => null,
     quota: async () => async () => {},
     request: async (_, options) => {
       sent = JSON.parse(options.body);
@@ -177,6 +179,41 @@ test("image endpoint constructs prompts itself and stores only validated provide
   assert.match(sent.prompt, /ground-level camera/);
   assert.equal(sent.n, 1);
   assert.equal(response.body.asset.url, "/assets/sample-orbital.webp");
+});
+test("a cached image for the same seed and prompt skips the provider and the quota", async () => {
+  const keys = [];
+  let saveKey;
+  const handler = createImageHandler({
+    lookup: async (key) => {
+      keys.push(key);
+      return null;
+    },
+    quota: async () => async () => {},
+    request: async () => ({ data: [{ b64_json: "encoded-image" }] }),
+    save: async (_, key) => {
+      saveKey = key;
+      return { url: "/assets/sample-orbital.webp" };
+    },
+  });
+  const body = { params: DEFAULTS, view: "surface", seed: 42 };
+  await handler(req(body), res());
+  const second = res();
+  await createImageHandler({
+    lookup: async (key) => {
+      keys.push(key);
+      return { url: "/assets/sample-orbital.webp" };
+    },
+    quota: async () => assert.fail("a cache hit must not use the quota"),
+    request: async () => assert.fail("a cache hit must not call the provider"),
+  })(req(body), second);
+  assert.equal(second.statusCode, 200);
+  assert.equal(second.body.cached, true);
+  assert.match(keys[0], /^42-[0-9a-f]{32}$/);
+  assert.equal(keys[1], keys[0]);
+  assert.equal(saveKey, keys[0]);
+  const invalid = res();
+  await handler(req({ ...body, seed: -1 }), invalid);
+  assert.equal(invalid.statusCode, 400);
 });
 test("production refuses local quota fallback and capabilities reflect missing services", async () => {
   process.env.NODE_ENV = "production";

@@ -58,7 +58,20 @@ Public Blob objects persist until an operator deletes them. Deleting a report or
 
 ## Scientific scope
 
-`lib/planet.js` is shared by the browser and server. It computes gravity, density, escape speed, stellar-mass-aware orbital periods, and a simplified energy-balance temperature with an assumed greenhouse offset. Physics is versioned (`physics-2` since report format v5): icy worlds blend the atmosphere's Bond albedo with ice at 0.55 in proportion to their water inventory, and airless worlds report their equilibrium temperature as an upper bound alongside the mean-surface range for slow (0.566 T_eq) and fast (0.989 T_eq) rotators. Reports saved earlier keep `physics-1` numbers. Rotation is an input; prograde solar-day duration is calculated relative to the orbit. Measured NASA mass, radius and orbital values retain their original precision. Atmosphere, pressure, water, rotation, tilt and terrain on catalogue worlds remain explicit scenario assumptions.
+`lib/planet.js` is shared by the browser and server. It computes gravity, density, escape speed, stellar-mass-aware orbital periods, and a simplified energy-balance temperature with an assumed greenhouse offset. Physics is versioned (`physics-2` since report format v5): icy worlds blend the atmosphere's Bond albedo with ice at 0.55 in proportion to their water inventory, and airless worlds report their equilibrium temperature as an upper bound alongside the mean-surface range for slow (0.566 T_eq) and fast (0.989 T_eq) rotators. Reports saved earlier keep `physics-1` numbers. `physics-3` adds tidal effects and habitability context:
+
+- **Tidal locking** (Gladman et al. 1996; Q 100, k₂ 0.3, I = 0.33 MR², from the assumed initial rotation against an assumed 1 Gyr age). A locked world has no solar day, its tilt is damped to about 0° (the tilt setting becomes art direction) and it has no seasons.
+- **Nightside collapse** (Joshi et al. 1997): a locked world below 0.1 bar freezes its air out on the nightside, and the liquid-water and pressure parts of the score drop to zero.
+- **Star temperature** T_eff = 5772 K × (L/R★²)^¼, which sets the star's colour, the sky colour and the habitable zone.
+- **Habitable zone** from the Kopparapu et al. 2014 coefficients (conservative: runaway to maximum greenhouse; optimistic: recent Venus to early Mars), for 2600–7200 K stars.
+- **Moons**: stable out to half the Hill radius and outside the Roche limit (2.44 planet radii). A locked planet's synchronous orbit lies at 1.44 Hill radii, outside every stable orbit, so it holds no moon.
+- A red-dwarf star-activity caveat beside the score (the score is unchanged), and a Kiang et al. 2007 dark-pigment clause on imagined red-dwarf vegetation.
+
+`lib/consistency.js` holds a list of cross-checks shown under **Model notes**: contradictions between parts of the model (bugs) and real tensions between models, such as a mild energy-balance temperature on an orbit sunward of the conservative habitable zone. Each rule has a test that breaks a world on purpose.
+
+Every number shown is tagged once in `quantityKind()` (calculated, estimated, assumed or imagined) and rounded once in `formatQuantity()`, so the stat tiles, the fact sheet Claude writes from, the model field note, image prompts and the agent agree.
+
+Rotation is an input; prograde solar-day duration is calculated relative to the orbit. Measured NASA mass, radius and orbital values retain their original precision. Atmosphere, pressure, water, rotation, tilt and terrain on catalogue worlds remain explicit scenario assumptions.
 
 The displayed Surface Environment Index is an illustrative 100-point rubric: temperature 40, plausible exposed liquid water 25, pressure 20, atmosphere 15. Airless worlds score zero; gas envelopes have no surface rating. ESI is a separate four-variable similarity index. The Surface Environment Index excludes gravity, density, radiation, toxicity and biological viability; even 100/100 does not establish habitability or human safety. ESI remains separate. Classification and both image prompts use the same temperature/phase results and deterministic visual specification. Gas worlds offer a cloud-deck viewpoint.
 
