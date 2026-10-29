@@ -9,7 +9,12 @@ import {
   seedQuery,
 } from "../lib/seed.js";
 import { imageCacheKey } from "../lib/image-cache.js";
-import { serializeReport, restoreReport } from "../lib/client-report.js";
+import {
+  serializeReport,
+  restoreReport,
+  safeAsset,
+} from "../lib/client-report.js";
+import { cachePath } from "../lib/storage.js";
 
 // 0.30 M☉ red dwarf, L 0.012, R★ 0.30, a = 0.104 AU; 0.61 M⊕ / 0.99 R⊕, 1 bar.
 const redDwarf = {
@@ -137,6 +142,13 @@ test("the same seed gives an identical report and image cache keys", () => {
   assert.notEqual(key(a), key(seededReport(seed + 1)));
   assert.notEqual(seededReport(seed, "alien").id, a.id);
   assert.equal(seedQuery(a), "?seed=2718281828");
+  // Cached images must pass the generated-image URL check the app applies.
+  for (const cacheKey of [key(a), imageCacheKey(null, ["model"])])
+    assert.ok(
+      safeAsset({
+        url: `https://store.public.blob.vercel-storage.com/${cachePath(cacheKey)}`,
+      }),
+    );
   assert.equal(
     seedQuery(seededReport(seed, "none")),
     "?seed=2718281828&biosphere=none",
