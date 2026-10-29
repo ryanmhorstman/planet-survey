@@ -224,3 +224,25 @@ test("star colour, size and sky follow T_eff; a locked world gets a terminator a
     /No stellar disk/,
   );
 });
+
+test("a hot, thick-atmosphere world is drawn dry and fully overcast, without blue water", () => {
+  const venus = {
+      ...DEFAULTS,
+      atmosphere: "thick CO2 (Venus-like)",
+      pressureBar: 90,
+      water: 43,
+    },
+    physics = calculate(venus);
+  assert.equal(physics.waterState, "Vapor favored");
+  for (const view of /** @type {const} */ (["orbital", "surface"])) {
+    const prompt = imagePrompt(venus, physics, view);
+    assert.doesNotMatch(prompt, /deep blue/);
+    assert.match(prompt, /no blue sky, cloud gaps or light shafts/);
+    assert.match(
+      prompt,
+      /no open liquid-water seas, rain, puddles or wet sheen/,
+    );
+  }
+  // Open water is still blue when the oceans are liquid.
+  assert.match(visualSpec(DEFAULTS, calculate(DEFAULTS)).palette, /deep blue/);
+});
