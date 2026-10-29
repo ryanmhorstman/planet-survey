@@ -213,7 +213,7 @@ test("star colour, size and sky follow T_eff; a locked world gets a terminator a
   assert.match(earthSurface, /a blue sky, from Rayleigh scattering/);
   assert.match(
     earthSurface,
-    /If the star is in frame, draw it as a warm white disc about the Sun's apparent width\./,
+    /If the star is in frame, draw it as a warm white disc about the Sun's apparent width: still small in the sky, and too bright to look at\./,
   );
   assert.doesNotMatch(earthSurface, /could almost look at it|hangs fixed/);
   assert.doesNotMatch(imagePrompt(DEFAULTS, earth, "orbital"), /terminator/);
