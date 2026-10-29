@@ -41,7 +41,7 @@ test("curated environments are distinct and each is complete, reproducible and p
       assert.equal(bytes.toString("ascii", 8, 12), "WEBP");
     }
   }
-  assert.equal(identities.size, 5);
+  assert.equal(identities.size, 6);
   const ice = sampleReport("boreal"),
     dry = sampleReport("cinder"),
     temperate = sampleReport("viridia");
@@ -56,6 +56,9 @@ test("curated environments are distinct and each is complete, reproducible and p
   assert.equal(locked.physics.solarDayHours, null);
   assert.equal(hot.physics.waterState, "Vapor favored");
   assert.ok(hot.params.pressureBar > 10);
+  const giant = sampleReport("gyre");
+  assert.match(giant.params.atmosphere, /hydrogen/);
+  assert.equal(giant.physics.esi, null);
 });
 
 test("reference restoration does not replace edited assumptions with curated parameters", () => {

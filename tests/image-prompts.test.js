@@ -8,6 +8,7 @@ import {
   imagePrompt,
   waterState,
   starAppearance,
+  giantClouds,
 } from "../lib/planet.js";
 import { fieldNoteRequest, FIELD_NOTE_SYSTEM } from "../lib/prompts.js";
 const fixtures = {
@@ -91,7 +92,7 @@ test("interpretation prompt separates catalogue evidence, assumptions and imagin
   assert.match(FIELD_NOTE_SYSTEM, /Never write "detected", "observed"/);
   assert.match(FIELD_NOTE_SYSTEM, /NASA Exoplanet Archive/);
   // Curated reference notes are the few-shot examples.
-  for (const world of ["boreal", "cinder", "viridia", "tether", "kiln"])
+  for (const world of ["boreal", "cinder", "viridia", "tether", "kiln", "gyre"])
     assert.ok(FIELD_NOTE_SYSTEM.includes(`<example world="${world}">`));
   assert.match(facts, /World: Example b, a confirmed exoplanet/);
   assert.match(facts, /equilibrium temperature 260 K \(archive estimate\)/);
@@ -245,4 +246,48 @@ test("a hot, thick-atmosphere world is drawn dry and fully overcast, without blu
   }
   // Open water is still blue when the oceans are liquid.
   assert.match(visualSpec(DEFAULTS, calculate(DEFAULTS)).palette, /deep blue/);
+});
+
+test("a giant planet is banded, sized and coloured by its cloud chemistry", () => {
+  const giant = {
+      ...DEFAULTS,
+      orbital: "outer habitable zone",
+      atmosphere: "hydrogen-helium envelope",
+      pressureBar: 10,
+      water: 0,
+      massEarth: 95,
+      radiusEarth: 9,
+      biosphere: "none",
+    },
+    physics = calculate(giant),
+    orbital = imagePrompt(giant, physics, "orbital"),
+    surface = imagePrompt(giant, physics, "surface");
+  assert.match(
+    orbital,
+    /darker belts running straight and parallel to the equator/,
+  );
+  assert.match(orbital, /bright water-ice and water cloud decks/);
+  assert.match(
+    surface,
+    /planet 9× Earth's width, at a scale far beyond Earth weather/,
+  );
+  assert.match(surface, /must not read as Earth clouds seen from an airliner/);
+  // Sudarsky et al. 2000: ammonia, water, clear, alkali-dark, silicate.
+  assert.deepEqual(
+    [120, 200, 600, 1000, 1600].map((k) => giantClouds(k).palette),
+    [
+      "cream, tan and rust-brown",
+      "bright white and slate blue",
+      "deep azure with sparse thin haze",
+      "dark blue-grey and charcoal",
+      "grey-white with a dull red glow",
+    ],
+  );
+  // A hot Jupiter from the archive takes its colour from pl_eqt.
+  const hot = calculate(giant, {
+    pl_name: "Example b",
+    hostname: "Example",
+    pl_eqt: 1500,
+  });
+  assert.match(visualSpec(giant, hot).terrain, /silicate cloud decks/);
 });
