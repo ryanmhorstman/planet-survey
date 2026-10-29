@@ -84,13 +84,15 @@ export function createImageHandler({
           output_format: "webp",
           output_compression: 80,
         };
-      // The prompt carries every parameter; the orbital reference view pins
-      // the globe's orientation. Same seed and prompt: reuse the image.
+      // The prompt carries every parameter; the orbital reference image pins
+      // the globe's geography and lighting. Same seed, prompt and guide: reuse
+      // the image.
       const cacheKey = imageCacheKey(seed, [
         settings.model,
         settings.size,
         settings.prompt,
         reference?.view ?? null,
+        reference?.png.toString("base64") ?? null,
       ]);
       const cached = orbital
         ? await lookup(cacheKey, reference.view)
