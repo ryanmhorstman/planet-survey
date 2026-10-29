@@ -143,6 +143,8 @@ try {
     for (const [key, prefix] of [
       ["cinder", "cinder"],
       ["viridia", "viridia"],
+      ["tether", "tether"],
+      ["kiln", "kiln"],
       ["boreal", "sample"],
     ]) {
       await page.locator(`.showcase-nav [data-world="${key}"]`).click();

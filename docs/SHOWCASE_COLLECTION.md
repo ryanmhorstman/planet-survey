@@ -1,6 +1,6 @@
 # Curated field collection
 
-The public collection now contains three complete worlds: `/?sample=boreal`, `/?sample=cinder` and `/?sample=viridia`. All use `sampleReport(key)`, the existing calculation engine, and the normal report, lightbox, export/import and sharing UI. `showcaseKey()` identifies a canonical world. The shared explicit `REFERENCE_ASSETS` registry supplies safe bundled image paths and descriptive alternative text to the client and storage validators.
+The public collection now contains five complete worlds: `/?sample=boreal`, `/?sample=cinder`, `/?sample=viridia`, `/?sample=tether` (a tidally locked red-dwarf world) and `/?sample=kiln` (a Venus-like hothouse). All use `sampleReport(key)`, the existing calculation engine, and the normal report, lightbox, export/import and sharing UI. `showcaseKey()` identifies a canonical world. The shared explicit `REFERENCE_ASSETS` registry supplies safe bundled image paths and descriptive alternative text to the client and storage validators.
 
 | World        | Assumptions and estimate                                                                  | Visual direction                                                                                     |
 | ------------ | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
