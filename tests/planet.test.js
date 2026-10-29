@@ -55,8 +55,16 @@ test("hot and frozen red-dwarf worlds cannot receive temperate liquid-ocean clas
   });
   assert.match(cold.classification, /GLACIAL/);
   assert.equal(cold.waterState, "Ice favored");
+  assert.ok(cold.tidalLock.locked);
+  assert.ok(cold.warnings.some((w) => w.includes("Tidal locking estimate")));
+  const legacy = calculate(
+    { ...p, starType: "M-type (red dwarf)", orbital: "outer edge (very cold)" },
+    null,
+    "physics-2",
+  );
+  assert.equal(legacy.tidalLock, null);
   assert.ok(
-    cold.warnings.some((w) =>
+    legacy.warnings.some((w) =>
       w.includes("synchronous rotation is not assumed"),
     ),
   );

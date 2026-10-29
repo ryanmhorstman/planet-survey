@@ -18,6 +18,12 @@ import {
   visualSpec,
   calculate,
   biosphereSpec,
+  formatYears,
+  TIDES,
+  statTile,
+  formatQuantity,
+  surfaceWater,
+  habitableZoneText,
 } from "./lib/planet.js";
 import {
   restoreReport,
@@ -25,6 +31,13 @@ import {
   restoreLegacy,
   safeAsset,
 } from "./lib/client-report.js";
+import { checkConsistency, CONSISTENCY_RULES } from "./lib/consistency.js";
+import {
+  paramsFromSeed,
+  randomSeed,
+  seededReport,
+  seedQuery,
+} from "./lib/seed.js";
 import { runFieldResearcher } from "./lib/field-researcher.js";
 
 const $ = (id) => document.getElementById(id);
@@ -34,6 +47,8 @@ const state = {
   view: "orbital",
   instrument: "illustration",
   catalog: null,
+  /** Seed of the current Randomize settings, if unchanged. */
+  seed: null,
   tasks: new Map(),
   capabilities: { analysis: false, images: false, sharing: false },
   capabilityStatus: "loading",
@@ -166,7 +181,7 @@ function updateValues() {
       f = calculate(p, state.catalog),
       biology = biosphereSpec(p, f);
     $("conditionsPreview").textContent =
-      `${format(f.temperatureC, 0)}°C mean · ${format(f.gravityG)} g · ${f.waterState}`;
+      `${formatQuantity("temperatureC", f.temperatureC)}°C mean · ${formatQuantity("gravityG", f.gravityG)} g · ${f.waterState}`;
     $("biosphereHelp").textContent = biology.present
       ? `Invented biology, not a life prediction. ${biology.palette}; ${biology.forms}.`
       : biology.reason;
@@ -286,6 +301,7 @@ function reportBody(r) {
     params: r.params,
     catalog: r.catalog,
     physicsVersion: r.physicsVersion,
+    ...(r.seed != null ? { seed: r.seed } : {}),
   };
 }
 const SECTION_LABELS = {
@@ -487,33 +503,44 @@ function render() {
       : "FICTIONAL WORLD · MODEL SURVEY";
   $("planetNameDisplay").textContent = r.name;
   $("planetClassDisplay").textContent = f.classification;
-  $("statTemp").textContent = `${format(f.temperatureC, 0)}°C`;
-  $("tempLabel").textContent =
-    f.temperatureKind === "equilibrium"
-      ? "Equilibrium temperature · upper bound"
-      : "Mean temperature · estimate";
-  $("statGravity").textContent = `${format(f.gravityG)} g`;
-  $("statEscape").textContent = `${format(f.escapeKms)} km/s`;
-  $("yearSource").textContent =
-    `Orbital period · ${r.catalog?.pl_orbper != null ? "catalogued" : "estimate"}`;
-  $("statYear").textContent = `${format(f.yearDays, 1)} Earth days`;
-  $("statDay").textContent =
-    f.solarDayHours == null
-      ? "No solar day cycle"
-      : `${format(f.solarDayHours, 1)} Earth hours`;
-  $("statWater").textContent = f.waterState;
-  $("statDensity").textContent = `${format(f.density)} g/cm³`;
+  // Labels and values come from statTile(), which shares its provenance and
+  // precision with the field note and the fact sheet Claude writes from.
+  for (const [key, label, value] of /** @type {const} */ ([
+    ["temperatureC", "tempLabel", "statTemp"],
+    ["gravityG", "gravityLabel", "statGravity"],
+    ["escapeKms", "escapeLabel", "statEscape"],
+    ["yearDays", "yearSource", "statYear"],
+    ["solarDayHours", "dayLabel", "statDay"],
+    ["waterState", "waterLabel", "statWater"],
+    ["density", "densityLabel", "statDensity"],
+    ["biosphere", "biosphereLabel", "statBiosphere"],
+  ])) {
+    const tile = statTile(key, p, f, r.catalog);
+    $(label).textContent = tile.label;
+    $(value).textContent = tile.value;
+  }
+  const locked = f.tidalLock?.locked === true;
   $("habScore").textContent =
     f.score == null ? "Not rated" : `${f.score} / 100`;
   $("habFill").hidden = f.score == null;
   $("habFill").value = f.score || 0;
-  $("esiScore").textContent = f.esi == null ? "Not rated" : f.esi.toFixed(3);
+  $("activityCaveat").hidden = !f.activityCaveat || f.score == null;
+  $("activityCaveat").textContent = f.activityCaveat ?? "";
+  $("esiScore").textContent =
+    f.esi == null ? "Not rated" : formatQuantity("esi", f.esi);
   $("esiFill").hidden = f.esi == null;
   $("esiFill").value = f.esi || 0;
   $("scoreFactors").replaceChildren(
     ...f.factors.map((factor) => {
-      const li = document.createElement("li");
-      li.textContent = `${factor.name}: ${factor.points} / ${factor.max}`;
+      const li = document.createElement("li"),
+        label = document.createElement("span"),
+        bar = document.createElement("progress");
+      label.textContent = `${factor.name}: ${factor.points} / ${factor.max}`;
+      bar.max = factor.max;
+      bar.value = factor.points;
+      bar.setAttribute("aria-label", label.textContent);
+      li.className = "score-factor";
+      li.append(label, bar);
       return li;
     }),
   );
@@ -543,31 +570,55 @@ function render() {
   );
   addFact(
     "Orbit",
-    `${format(f.au, 5)} AU (${r.catalog?.pl_orbsmax != null ? "catalogued" : "derived scenario"}); ${f.orbitSource.toLowerCase()}`,
+    `${formatQuantity("au", f.au)} AU (${r.catalog?.pl_orbsmax != null ? "catalogued" : "derived scenario"}); ${f.orbitSource.toLowerCase()}`,
   );
   addFact(
     "Stellar assumptions",
-    `${format(f.star.mass, 3)} solar masses (${r.catalog?.st_mass != null ? "catalogued" : "class estimate"}); ${format(f.star.luminosity, 5)} solar luminosities (${r.catalog?.st_lum != null ? "catalogued" : "class estimate"})`,
+    `${format(f.star.mass, 3)} solar masses (${r.catalog?.st_mass != null ? "catalogued" : "class estimate"}); ${format(f.star.luminosity, 5)} solar luminosities (${r.catalog?.st_lum != null ? "catalogued" : "class estimate"}); effective temperature ${formatQuantity("teffK", f.star.teffK)} K (calculated from luminosity and radius)`,
   );
+  if (f.tidalLock) {
+    const zone = habitableZoneText(f);
+    addFact("Habitable zone", zone.charAt(0).toUpperCase() + zone.slice(1));
+    addFact(
+      "Moons",
+      `${f.moons.reason.charAt(0).toUpperCase() + f.moons.reason.slice(1)}. Stable orbits reach about half the Hill radius (${Math.round(f.moons.hillPlanetRadii)} planet radii); the Roche limit is ${f.moons.rochePlanetRadii} planet radii.`,
+    );
+  }
   addFact(
     "Temperature",
-    `${f.temperatureSource}${f.albedo == null ? "" : `; Bond albedo ${format(f.albedo)} (${f.albedoSource})`}. Greenhouse offset: ${format(f.greenhouseK)} K. ${f.airlessMeanRangeC ? `With no atmosphere, the mean surface temperature lies between about ${format(f.airlessMeanRangeC[0], 0)}°C (slow rotation) and ${format(f.airlessMeanRangeC[1], 0)}°C (fast rotation or high thermal inertia). ` : ""}Weather and regional extremes are not resolved.`,
+    `${f.temperatureSource}${f.albedo == null ? "" : `; Bond albedo ${formatQuantity("albedo", f.albedo)} (${f.albedoSource})`}. Greenhouse offset: ${formatQuantity("greenhouseK", f.greenhouseK)} K. ${f.airlessMeanRangeC ? `With no atmosphere, the mean surface temperature lies between about ${formatQuantity("temperatureC", f.airlessMeanRangeC[0])}°C (slow rotation) and ${formatQuantity("temperatureC", f.airlessMeanRangeC[1])}°C (fast rotation or high thermal inertia). ` : ""}Weather and regional extremes are not resolved.`,
   );
   addFact(
     "Environment assumptions",
-    `${p.atmosphere}; ${format(p.pressureBar)} bar; ${p.water}% water/ice inventory; ${p.tilt}° tilt`,
+    `${p.atmosphere}; ${formatQuantity("pressureBar", p.pressureBar)} bar; water enough to cover ${p.water}% of the surface (${surfaceWater(p, f).text}); ${locked ? `${p.tilt}° tilt setting (imagined: tides damp a locked world's tilt to about 0°, so it has no seasons)` : `${p.tilt}° tilt`}${f.nightside ? `. ${f.nightside.collapses ? `Below the ${f.nightside.thresholdBar} bar collapse threshold (Joshi et al. 1997), air and water would freeze out on the nightside` : `Above the ${f.nightside.thresholdBar} bar collapse threshold (Joshi et al. 1997), the air carries heat to the nightside`} (estimated)` : ""}`,
   );
   const biology = biosphereSpec(p, f);
-  $("statBiosphere").textContent = biology.present
-    ? "Imagined · not established"
-    : "None depicted";
   addFact(
     "Imagined biosphere",
-    `${p.biosphere.charAt(0).toUpperCase() + p.biosphere.slice(1)} mode. ${biology.present ? `${biology.palette}; ${biology.forms}. Artistic choices, not detected life.` : biology.reason}`,
+    `${p.biosphere.charAt(0).toUpperCase() + p.biosphere.slice(1)} mode. ${biology.present ? `${biology.palette}; ${biology.forms}. Artistic choices, not detected life.${biology.pigmentNote ? ` ${biology.pigmentNote}` : ""}` : biology.reason}`,
   );
   addFact(
     "Rotation assumption",
-    `${format(p.rotationHours, 2)} Earth hours per rotation. ${f.solarDaysPerYear == null ? "No solar day cycle in the synchronous case." : `${format(f.solarDaysPerYear, 1)} modeled solar days per orbit.`}`,
+    locked
+      ? `Tidally locked: from an assumed ${formatQuantity("rotationHours", p.rotationHours)}-hour initial rotation, locking takes about ${formatYears(f.tidalLock.lockYears)}, within the assumed ${formatYears(f.tidalLock.ageYears)} system age (Q ${TIDES.Q}, k₂ ${TIDES.k2}). One face stays toward the star.`
+      : `${formatQuantity("rotationHours", p.rotationHours)} Earth hours per rotation (assumed). ${f.solarDaysPerYear == null ? "No solar day cycle in the synchronous case." : `${format(f.solarDaysPerYear, 1)} modeled solar days per orbit.`}${f.tidalLock ? ` Tidal locking would take about ${formatYears(f.tidalLock.lockYears)}, longer than the assumed ${formatYears(f.tidalLock.ageYears)} system age.` : ""}`,
+  );
+  const findings = checkConsistency({ p, physics: f });
+  $("modelNotesSummary").textContent = findings.length
+    ? `Model notes (${findings.length})`
+    : "Model notes";
+  $("modelNotes").replaceChildren(
+    ...(findings.length
+      ? findings.map((finding) => {
+          const li = document.createElement("li");
+          li.textContent = `${finding.kind === "note" ? "Note" : "Inconsistency"}: ${finding.message}`;
+          return li;
+        })
+      : [
+          Object.assign(document.createElement("li"), {
+            textContent: `All ${CONSISTENCY_RULES.length} consistency checks pass.`,
+          }),
+        ]),
   );
   $("modelWarnings").replaceChildren(
     ...f.warnings.map((w) => {
@@ -834,12 +885,22 @@ async function generate() {
     scrollToReport();
     return;
   }
-  const number = Math.floor(Math.random() * 90000 + 10000);
-  const r = createReport({
-    params,
-    catalog: state.catalog,
-    name: `PSU-${number}`,
-  });
+  // Unchanged Randomize settings keep their seed, so the report has a permalink.
+  const seed =
+    state.seed != null &&
+    !state.catalog &&
+    JSON.stringify(params) ===
+      JSON.stringify(paramsFromSeed(state.seed, params.biosphere))
+      ? state.seed
+      : null;
+  const r =
+    seed != null
+      ? seededReport(seed, params.biosphere)
+      : createReport({
+          params,
+          catalog: state.catalog,
+          name: `PSU-${Math.floor(Math.random() * 90000 + 10000)}`,
+        });
   remember(r);
   selectReport(r);
   announce(`Model report ready for ${r.name}.`);
@@ -1069,7 +1130,16 @@ function openShare() {
     showShareURL(
       location.origin + location.pathname + "?report=" + sharingReport.publicId,
     );
-  else if (!state.capabilities.sharing) {
+  else if (sharingReport.seed != null) {
+    // A seed link rebuilds the same world anywhere; publishing stays available
+    // for the field note, sites and images exactly as they are.
+    showShareURL(
+      location.origin + location.pathname + seedQuery(sharingReport),
+    );
+    $("publishShare").hidden = !state.capabilities.sharing;
+    $("shareExplanation").textContent =
+      `This seed link rebuilds the same world for anyone, and reuses its images once they exist.${state.capabilities.sharing ? " Create a public link instead to include this field note and your saved sites." : ""}`;
+  } else if (!state.capabilities.sharing) {
     $("publishShare").hidden = true;
     $("shareExplanation").textContent =
       "Public links are unavailable right now. Save this report as a file to keep its interpretation and available image references, or share the reference world.";
@@ -1134,25 +1204,9 @@ $("detachCatalog").addEventListener("click", () => {
   announce("Catalogue measurements are now editable as a fictional variation.");
 });
 $("randomizeBtn").addEventListener("click", () => {
-  const choose = (values) => values[Math.floor(Math.random() * values.length)];
-  const mass = Math.round((0.3 + Math.random() * 2.7) * 10) / 10;
-  const atmosphere = choose(Object.keys(ATMOSPHERES));
-  const params = {
-    ...DEFAULTS,
-    biosphere: $("imaginedBiosphere").value,
-    starType: choose(Object.keys(STARS)),
-    orbital: choose(Object.keys(ZONES)),
-    atmosphere,
-    massEarth: mass,
-    radiusEarth: Math.round(mass ** 0.28 * 10) / 10,
-    tilt: Math.floor(Math.random() * 70),
-    water:
-      atmosphere.includes("none") || atmosphere.includes("hydrogen")
-        ? 0
-        : Math.floor(Math.random() * 101),
-    pressureBar: ATMOSPHERES[atmosphere].pressure,
-  };
-  setControls(params);
+  const seed = randomSeed();
+  setControls(paramsFromSeed(seed, $("imaginedBiosphere").value));
+  state.seed = seed;
   $("parameterDetails").open = true;
   $("parameterDetails").scrollIntoView({
     behavior: reducedMotion() ? "instant" : "smooth",
@@ -1404,6 +1458,14 @@ async function boot() {
       );
       r = restoreReport(data.report);
       r.publicId = url.searchParams.get("report");
+    } else if (url.searchParams.has("seed")) {
+      const biosphere = url.searchParams.get("biosphere") ?? "familiar";
+      if (!["none", "familiar", "alien"].includes(biosphere))
+        throw new Error("Choose None, Familiar or Alien for the biosphere.");
+      r = seededReport(
+        Number(url.searchParams.get("seed")),
+        /** @type {"none" | "familiar" | "alien"} */ (biosphere),
+      );
     } else if (url.searchParams.has("sample"))
       r = sampleReport(url.searchParams.get("sample"));
     else if (location.hash.length > 1) {

@@ -7,6 +7,7 @@ import {
   visualSpec,
   imagePrompt,
   waterState,
+  starAppearance,
 } from "../lib/planet.js";
 import { fieldNoteRequest, FIELD_NOTE_SYSTEM } from "../lib/prompts.js";
 const fixtures = {
@@ -55,7 +56,7 @@ for (const [name, changes] of Object.entries(fixtures))
       if (name === "locked")
         assert.match(
           prompt,
-          /Synchronous rotation: fixed illumination geometry/,
+          /(Tidally locked|Synchronous rotation \(assumed\)).*stands still in the sky/,
         );
     }
   });
@@ -171,4 +172,55 @@ test("regional anchors repeat and respect all eight fixture environments", () =>
   assert.match(site(fixtures.gas), /no solid ground/);
   assert.match(site(fixtures.glacial), /ice-basin margin/);
   assert.match(site(fixtures.airless), /dry basin/);
+});
+test("star colour, size and sky follow T_eff; a locked world gets a terminator and a fixed star", () => {
+  const redDwarf = {
+      ...DEFAULTS,
+      starType: "M-type (red dwarf)",
+      orbital: "inner habitable zone",
+      massEarth: 0.61,
+      radiusEarth: 0.99,
+      water: 36,
+    },
+    f = calculate(redDwarf),
+    star = starAppearance(redDwarf, f),
+    surface = imagePrompt(redDwarf, f, "surface"),
+    orbital = imagePrompt(redDwarf, f, "orbital");
+  assert.equal(star.colour, "orange");
+  assert.match(surface, /pale peach near the star/);
+  assert.match(surface, /orange illumination from a 3,488 K star/);
+  assert.match(
+    surface,
+    /The star hangs fixed \d+° above the horizon as a large orange disc 2\.9× the Sun's apparent width, about 13% as bright per unit area as the Sun, so you could almost look at it; it never rises or sets/,
+  );
+  assert.match(surface, /No second star/);
+  assert.match(orbital, /sharp day–night terminator/);
+  assert.match(orbital, /No stellar disk/);
+  assert.match(surface, /Tidally locked: one hemisphere always faces the star/);
+  assert.match(surface, /Kiang et al\. 2007/);
+  assert.equal(
+    visualSpec(redDwarf, f).starElevationDeg,
+    visualSpec(redDwarf, calculate(redDwarf)).starElevationDeg,
+  );
+  // The fact sheet and the agent quote the same colour.
+  assert.match(
+    fieldNoteRequest(redDwarf, f, null).messages[0].content,
+    /Starlight: orange; the star looks 2\.9× as wide as the Sun from Earth\./,
+  );
+
+  const earth = calculate(DEFAULTS),
+    earthSurface = imagePrompt(DEFAULTS, earth, "surface");
+  assert.match(earthSurface, /a blue sky, from Rayleigh scattering/);
+  assert.match(
+    earthSurface,
+    /If the star is in frame, draw it as a warm white disc about the Sun's apparent width\./,
+  );
+  assert.doesNotMatch(earthSurface, /could almost look at it|hangs fixed/);
+  assert.doesNotMatch(imagePrompt(DEFAULTS, earth, "orbital"), /terminator/);
+
+  const binary = { ...DEFAULTS, starType: "binary star system" };
+  assert.match(
+    imagePrompt(binary, calculate(binary), "surface"),
+    /No stellar disk/,
+  );
 });
