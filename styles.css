@@ -2889,7 +2889,7 @@ body > .footer {
 }
 .world-choices {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   margin: 20px 0;
   border: 1px solid var(--gold-rule);
 }

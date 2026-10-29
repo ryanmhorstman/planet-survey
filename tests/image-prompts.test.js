@@ -91,7 +91,7 @@ test("interpretation prompt separates catalogue evidence, assumptions and imagin
   assert.match(FIELD_NOTE_SYSTEM, /Never write "detected", "observed"/);
   assert.match(FIELD_NOTE_SYSTEM, /NASA Exoplanet Archive/);
   // Curated reference notes are the few-shot examples.
-  for (const world of ["boreal", "cinder", "viridia"])
+  for (const world of ["boreal", "cinder", "viridia", "tether", "kiln"])
     assert.ok(FIELD_NOTE_SYSTEM.includes(`<example world="${world}">`));
   assert.match(facts, /World: Example b, a confirmed exoplanet/);
   assert.match(facts, /equilibrium temperature 260 K \(archive estimate\)/);
