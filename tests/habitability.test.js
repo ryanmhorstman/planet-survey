@@ -39,10 +39,13 @@ test("test world: locked, tilt damped, cool star, nightside holds, no moons", ()
   assert.ok(f.star.teffK > 3450 && f.star.teffK < 3500);
   assert.match(facts, /star's effective temperature 3,488 K/);
   assert.deepEqual(f.nightside, { thresholdBar: 0.1, collapses: false });
-  assert.match(facts, /nightside: at 1 bar the atmosphere carries enough heat/);
+  assert.match(
+    facts,
+    /nightside: at 1 bar the atmosphere is thick enough not to collapse.*surface temperature is not modelled/,
+  );
   assert.match(
     localNarrative(redDwarf, f).sections[0].text,
-    /keep the nightside from freezing out/,
+    /not to freeze out as frost on the nightside, though the nightside stays colder/,
   );
   assert.equal(f.moons.possible, false);
   assert.match(
@@ -141,4 +144,9 @@ test("red-dwarf vegetation carries the imagined dark-pigment clause", () => {
   assert.equal(biosphereSpec(DEFAULTS, calculate(DEFAULTS)).pigmentNote, null);
   const barren = { ...redDwarf, biosphere: "none" };
   assert.doesNotMatch(fieldNoteFacts(barren, calculate(barren), null), /Kiang/);
+});
+
+test("the fact sheet never ends a line with a doubled full stop", () => {
+  for (const p of [redDwarf, DEFAULTS])
+    assert.doesNotMatch(fieldNoteFacts(p, calculate(p), null), /\.\.(\n|$)/);
 });
