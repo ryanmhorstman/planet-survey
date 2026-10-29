@@ -7,6 +7,8 @@ import { createGeography } from "../lib/geography.js";
 import {
   orbitalReference,
   orbitalImagePrompt,
+  renderOrbitalPixels,
+  iceEdgeSample,
   ORBITAL_REFERENCE_WIDTH as width,
   ORBITAL_REFERENCE_HEIGHT as height,
 } from "../lib/orbital-reference.js";
@@ -79,6 +81,57 @@ test("orbital renders repeat from pinned v1/v2 geography with stable framing and
       createGeography(r.params, r.physics, 512, r.cartography).id,
     );
   }
+});
+test("a locked world's guide globe has an unlit nightside", () => {
+  const r = createReport({
+      params: {
+        ...DEFAULTS,
+        starType: "M-type (red dwarf)",
+        orbital: "inner habitable zone",
+      },
+    }),
+    locked = createGeography(r.params, r.physics, 512, r.cartography),
+    view = orbitalView(r.cartography);
+  assert.equal(locked.physics.solarDayHours, null);
+  /** @param {any} model */
+  const nightLimb = (model) => {
+    const pixels = renderOrbitalPixels(model, view),
+      y = height / 2,
+      at = (/** @type {number} */ x) =>
+        pixels.subarray(
+          y * (width * 3 + 1) + 1 + x * 3,
+          y * (width * 3 + 1) + 4 + x * 3,
+        );
+    let x = width - 1;
+    while (at(x).join() === "9,13,16") x--;
+    return [...at(x - 4)].reduce((sum, n) => sum + n, 0);
+  };
+  const spinning = {
+    ...locked,
+    physics: { ...locked.physics, solarDayHours: 24 },
+  };
+  assert.ok(nightLimb(locked) < 30, "Nightside should be close to black");
+  assert.ok(nightLimb(spinning) > 2 * nightLimb(locked));
+});
+test("the guide roughens ice edges without changing ice far from freezing", () => {
+  const r = createReport({ params: DEFAULTS }),
+    model = createGeography(r.params, r.physics, 512, r.cartography),
+    sample = (
+      /** @type {number} */ temperatureC,
+      /** @type {number} */ longitude,
+    ) =>
+      iceEdgeSample(model, {
+        latitude: 60,
+        longitude,
+        temperatureC,
+        surface: "Ocean",
+        ice: false,
+      }).ice;
+  const longitudes = Array.from({ length: 180 }, (_, i) => i * 2 - 180),
+    edge = longitudes.map((longitude) => sample(1, longitude));
+  assert.ok(edge.includes(true) && edge.includes(false), "Edge is a circle");
+  assert.ok(longitudes.every((longitude) => !sample(15, longitude)));
+  assert.ok(longitudes.every((longitude) => sample(-15, longitude)));
 });
 test("orbital conditioning retains eight environmental families and replaces competing geography recipes", () => {
   for (const changes of [
