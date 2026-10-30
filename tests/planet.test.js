@@ -294,7 +294,12 @@ test("vegetation art direction respects hostile environments and exposed land", 
   for (const params of cases) {
     const spec = visualSpec(params, calculate(params));
     assert.equal(spec.vegetation, false);
-    assert.match(spec.biosphere, /no forests, plants/);
+    // Only a giant's cloud decks carry imagined floating life instead.
+    assert.equal(spec.floaters, params.atmosphere.includes("hydrogen"));
+    assert.match(
+      spec.biosphere,
+      spec.floaters ? /life floats/ : /no forests, plants/,
+    );
   }
 });
 test("invented geography is repeatable and obeys ocean, dry and gas scenarios", () => {

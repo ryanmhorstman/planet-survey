@@ -169,12 +169,54 @@ test("regional anchors repeat and respect all eight fixture environments", () =>
     const p = { ...DEFAULTS, ...changes };
     return visualSpec(p, calculate(p)).surfaceSite;
   };
-  assert.match(site({}), /shore of the largest compact landmass/);
-  assert.match(site({ water: 90 }), /one small compact island/);
   assert.match(site({ water: 100 }), /no islands/);
   assert.match(site(fixtures.gas), /no solid ground/);
-  assert.match(site(fixtures.glacial), /ice-basin margin/);
-  assert.match(site(fixtures.airless), /dry basin/);
+  assert.match(site(fixtures.glacial), /ice|glacier/);
+  assert.match(site(fixtures.airless), /no open liquid seas/);
+});
+test("surface scenes vary between worlds and fit each world's land, water and gravity", () => {
+  const scenes = new Map();
+  for (const water of [10, 30, 50, 70, 90])
+    for (const massEarth of [0.3, 0.6, 1, 1.6, 2.5, 4])
+      for (const tilt of [5, 23, 40]) {
+        const p = { ...DEFAULTS, water, massEarth, tilt },
+          f = calculate(p),
+          site = visualSpec(p, f).surfaceSite;
+        const kind = /shore of/.test(site)
+          ? "shore"
+          : /sea-cliff/.test(site)
+            ? "islands"
+            : /escarpment/.test(site)
+              ? "valley"
+              : /canyon/.test(site)
+                ? "canyon"
+                : /mountain ridge/.test(site)
+                  ? "mountains"
+                  : /delta/.test(site)
+                    ? "delta"
+                    : assert.fail(site);
+        scenes.set(kind, (scenes.get(kind) ?? 0) + 1);
+        // Island views need water to look down on; canyons and ranges need land.
+        if (kind === "islands") assert.ok(water >= 40);
+        if (["canyon", "mountains"].includes(kind)) assert.ok(water <= 70);
+        if (kind === "mountains")
+          assert.match(
+            site,
+            f.gravityG < 0.7
+              ? /tall, steep, jagged/
+              : f.gravityG > 1.5
+                ? /low, broad, rounded/
+                : /rugged/,
+          );
+      }
+  assert.equal(scenes.size, 6, JSON.stringify([...scenes]));
+  const shares = [...scenes.values()].map((n) => n / 90);
+  assert.ok(Math.max(...shares) < 0.35, JSON.stringify([...scenes]));
+  // An airless world has no wind to build dunes.
+  for (const massEarth of [0.05, 0.1, 0.2, 0.3, 0.5, 0.8]) {
+    const p = { ...DEFAULTS, ...fixtures.airless, massEarth };
+    assert.doesNotMatch(visualSpec(p, calculate(p)).surfaceSite, /dunes/);
+  }
 });
 test("star colour, size and sky follow T_eff; a locked world gets a terminator and a fixed star", () => {
   const redDwarf = {
@@ -359,4 +401,50 @@ test("the night sky follows the air, and a locked world's night is its far side"
   assert.match(locked, /permanently dark far hemisphere/);
   assert.match(locked, /No plants grow on the permanent nightside/);
   assert.doesNotMatch(locked, /Silhouettes of the imagined vegetation/);
+});
+test("rotating worlds get a repeatable time of day; locked and overcast ones do not", () => {
+  const spec = (changes) => {
+    const p = { ...DEFAULTS, ...changes };
+    return visualSpec(p, calculate(p));
+  };
+  const times = new Set();
+  for (const water of [10, 30, 50, 70, 90])
+    for (const massEarth of [0.5, 1, 2]) {
+      const s = spec({ water, massEarth });
+      times.add(s.timeOfDay);
+      assert.equal(s.timeOfDay, spec({ water, massEarth }).timeOfDay);
+    }
+  assert.ok(times.size >= 3, [...times].join(" | "));
+  const p = { ...DEFAULTS, water: 50 },
+    f = calculate(p);
+  assert.ok(imagePrompt(p, f, "surface").includes(visualSpec(p, f).timeOfDay));
+  assert.ok(!imagePrompt(p, f, "orbital").includes(visualSpec(p, f).timeOfDay));
+  assert.equal(spec(fixtures.locked).timeOfDay, null);
+  assert.equal(spec(fixtures.venus).timeOfDay, null);
+});
+test("cool giants can carry imagined floating life, never hot ones or with no biosphere", () => {
+  const giant = {
+      ...DEFAULTS,
+      ...fixtures.gas,
+      orbital: "outer habitable zone",
+    },
+    f = calculate(giant),
+    surface = imagePrompt(giant, f, "surface");
+  assert.match(surface, /life floats: enormous translucent gas-bag organisms/);
+  assert.doesNotMatch(surface, /spacecraft, animals/);
+  assert.match(imagePrompt(giant, f, "orbital"), /spacecraft, animals/);
+  assert.match(imagePrompt(giant, f, "night"), /floating gas-bag organisms/);
+  const alien = { ...giant, biosphere: "alien" };
+  assert.match(
+    imagePrompt(alien, calculate(alien), "surface"),
+    /no resemblance to Earth jellyfish/,
+  );
+  const none = { ...giant, biosphere: "none" };
+  assert.equal(visualSpec(none, calculate(none)).floaters, false);
+  const hot = calculate(giant, {
+    pl_name: "Example b",
+    hostname: "Example",
+    pl_eqt: 1500,
+  });
+  assert.equal(visualSpec(giant, hot).floaters, false);
 });
