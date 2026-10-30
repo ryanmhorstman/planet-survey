@@ -66,6 +66,8 @@ const VIEW_BUTTONS = {
   surface: "btnSurface",
   deep: "btnDeep",
   night: "btnNight",
+  postcard: "btnPostcard",
+  aftermath: "btnAftermath",
 };
 // Retain the experiment for development without exposing it in the public journey.
 const cartographyPreview = (() => {
@@ -132,6 +134,8 @@ function runtime(r) {
     surface: "idle",
     deep: "idle",
     night: "idle",
+    postcard: "idle",
+    aftermath: "idle",
     errors: {},
   });
 }

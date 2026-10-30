@@ -52,9 +52,7 @@ export function createImageHandler({
         throw new InputError(error.message);
       }
       if (!IMAGE_VIEWS.includes(input.view))
-        throw new InputError(
-          "Choose an orbital, surface, deep-sea or night-sky view.",
-        );
+        throw new InputError("Choose one of this world's views.");
       const key = process.env.OPENAI_API_KEY || process.env.PLANET_OPENAI_KEY;
       if (!key)
         throw new ServiceError(

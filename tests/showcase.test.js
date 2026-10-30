@@ -47,6 +47,8 @@ test("curated environments are distinct and each is complete, reproducible and p
     "surface",
     "deep",
     "night",
+    "postcard",
+    "aftermath",
   ]);
   const ice = sampleReport("boreal"),
     dry = sampleReport("cinder"),

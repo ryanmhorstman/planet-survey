@@ -11,6 +11,8 @@ import {
   giantClouds,
   imageViews,
   viewLabel,
+  postcardTagline,
+  aftermathFate,
 } from "../lib/planet.js";
 import { fieldNoteRequest, FIELD_NOTE_SYSTEM } from "../lib/prompts.js";
 const fixtures = {
@@ -341,13 +343,30 @@ test("deep-sea and night-sky views are offered only where they make sense", () =
     const p = { ...DEFAULTS, ...changes };
     return imageViews(p, calculate(p));
   };
-  assert.deepEqual(views({}), ["orbital", "surface", "deep", "night"]);
+  assert.deepEqual(views({}), [
+    "orbital",
+    "surface",
+    "deep",
+    "night",
+    "postcard",
+    "aftermath",
+  ]);
   // Ice-covered oceans keep a dark sea beneath them; airless skies are clear.
   assert.ok(views(fixtures.glacial).includes("deep"));
-  assert.deepEqual(views(fixtures.airless), ["orbital", "surface", "night"]);
-  assert.deepEqual(views(fixtures.gas), ["orbital", "surface", "night"]);
+  assert.deepEqual(views(fixtures.airless), [
+    "orbital",
+    "surface",
+    "night",
+    "postcard",
+  ]);
+  assert.deepEqual(views(fixtures.gas), [
+    "orbital",
+    "surface",
+    "night",
+    "postcard",
+  ]);
   // A Venus-like overcast hides the stars and boils the oceans.
-  assert.deepEqual(views(fixtures.venus), ["orbital", "surface"]);
+  assert.deepEqual(views(fixtures.venus), ["orbital", "surface", "postcard"]);
   const venus = { ...DEFAULTS, ...fixtures.venus };
   assert.throws(() => imagePrompt(venus, calculate(venus), "night"), {
     message: /too hazy to see the stars/,
@@ -447,4 +466,50 @@ test("cool giants can carry imagined floating life, never hot ones or with no bi
     pl_eqt: 1500,
   });
   assert.equal(visualSpec(giant, hot).floaters, false);
+});
+
+test("a postcard is a poster with one tagline, and its tourist dresses for the world", () => {
+  const card = (changes) => {
+    const p = { ...DEFAULTS, ...changes };
+    return [
+      imagePrompt(p, calculate(p), "postcard"),
+      postcardTagline(p, calculate(p)),
+    ];
+  };
+  const [earth, earthLine] = card({});
+  assert.match(earth, /vintage travel poster/);
+  assert.match(earth, /in ordinary holiday clothes/);
+  assert.ok(earth.includes(`The only text is "${earthLine}"`));
+  assert.doesNotMatch(earth, /Photorealistic/);
+  const [hot, hotLine] = card(fixtures.venus);
+  assert.match(hot, /in a spacesuit/);
+  assert.equal(hotLine, "THE WARMEST WELCOME IN THE GALAXY");
+  assert.equal(card(fixtures.locked)[1], "WHERE THE SUN NEVER SETS");
+  assert.equal(card(fixtures.airless)[1], "NO AIR. NO CROWDS.");
+  assert.equal(card(fixtures.gas)[1], "RIDE THE STORMS");
+  assert.equal(card(fixtures.glacial)[1], "THE GREAT WHITE GETAWAY");
+});
+test("an aftermath shows the same place after its seas are gone, by the fate its star and size allow", () => {
+  const p = { ...DEFAULTS, biosphere: "alien" },
+    f = calculate(p),
+    after = imagePrompt(p, f, "aftermath");
+  assert.ok(after.includes(visualSpec(p, f).surfaceSite));
+  assert.match(after, /same local setting as the surface view/);
+  assert.match(after, /brightened past the runaway-greenhouse limit/);
+  assert.match(after, /bleached, petrified remains/);
+  assert.match(after, /No liquid water/);
+  assert.equal(aftermathFate(p, f), "boiled");
+  // Red dwarfs flare; small worlds cannot hold their air.
+  const red = { ...DEFAULTS, starType: "M-type (red dwarf)" },
+    small = { ...DEFAULTS, massEarth: 0.1, radiusEarth: 0.5 };
+  assert.equal(aftermathFate(red, calculate(red)), "stripped");
+  assert.equal(aftermathFate(small, calculate(small)), "stripped");
+  assert.match(
+    imagePrompt(small, calculate(small), "aftermath"),
+    /flares and wind stripped most of the air away/,
+  );
+  const glacial = { ...DEFAULTS, ...fixtures.glacial };
+  assert.throws(() => imagePrompt(glacial, calculate(glacial), "aftermath"), {
+    message: /no living seas to lose/,
+  });
 });
