@@ -30,6 +30,7 @@ test("production build emits absolute social metadata and only public files", as
       "seed.js",
       "terrain-detail.js",
       "terrain.js",
+      "visitor.js",
       "water-phase.js",
     ]);
     assert.ok(
