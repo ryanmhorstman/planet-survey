@@ -42,6 +42,12 @@ test("curated environments are distinct and each is complete, reproducible and p
     }
   }
   assert.equal(identities.size, 6);
+  assert.deepEqual(Object.keys(sampleReport("viridia").images), [
+    "orbital",
+    "surface",
+    "deep",
+    "night",
+  ]);
   const ice = sampleReport("boreal"),
     dry = sampleReport("cinder"),
     temperate = sampleReport("viridia");
