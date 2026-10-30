@@ -150,3 +150,65 @@ test("the fact sheet never ends a line with a doubled full stop", () => {
   for (const p of [redDwarf, DEFAULTS])
     assert.doesNotMatch(fieldNoteFacts(p, calculate(p), null), /\.\.(\n|$)/);
 });
+
+test("oceans sunward of the recent-Venus limit boil away, and the globe shows no seas", async () => {
+  const { createGeography, samplePlanetLocation } =
+    await import("../lib/geography.js");
+  const hot = { ...DEFAULTS, orbital: "inner edge (very hot)" },
+    f = calculate(hot);
+  assert.equal(f.runaway.lost, true);
+  assert.equal(f.waterState, "Vapor favored");
+  for (const name of ["Mean temperature", "Exposed liquid water"])
+    assert.equal(f.factors.find((x) => x.name === name).points, 0);
+  assert.match(
+    f.warnings.join(" "),
+    /runaway greenhouse boils the oceans away/,
+  );
+  assert.match(
+    fieldNoteFacts(hot, f, null),
+    /oceans: sunward of the recent-Venus limit/,
+  );
+  const model = createGeography(hot, f, 64);
+  for (let lat = -80; lat <= 80; lat += 10)
+    for (let lon = -180; lon < 180; lon += 15)
+      assert.notEqual(samplePlanetLocation(model, lat, lon).surface, "Ocean");
+  // The same orbit under physics-3 keeps its old numbers.
+  assert.equal(
+    calculate(hot, null, "physics-3").waterState,
+    "Liquid water plausible",
+  );
+  // Inside the limit, oceans stay.
+  assert.equal(calculate(DEFAULTS).runaway.lost, false);
+});
+
+test("a world beyond the cosmic shoreline cannot keep its air", () => {
+  const moon = { ...DEFAULTS, massEarth: 0.0123, radiusEarth: 0.27 },
+    f = calculate(moon);
+  assert.equal(f.retention.retained, false);
+  for (const factor of f.factors)
+    if (factor.name !== "Mean temperature") assert.equal(factor.points, 0);
+  assert.match(f.warnings.join(" "), /beyond the cosmic shoreline/);
+  assert.match(
+    fieldNoteFacts(moon, f, null),
+    /atmosphere: beyond the cosmic shoreline/,
+  );
+  // A Mars-sized world at 1.7 AU sits just inside the line; Earth is far inside.
+  const mars = {
+    ...DEFAULTS,
+    massEarth: 0.107,
+    radiusEarth: 0.532,
+    orbital: "outer edge (very cold)",
+  };
+  assert.equal(calculate({ ...mars }).retention.retained, true);
+  assert.equal(calculate(DEFAULTS).retention.retained, true);
+  // Airless worlds and gas giants are not judged.
+  assert.equal(
+    calculate({
+      ...DEFAULTS,
+      atmosphere: "none (airless body)",
+      pressureBar: 0,
+      water: 0,
+    }).retention,
+    null,
+  );
+});

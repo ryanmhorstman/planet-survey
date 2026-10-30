@@ -75,6 +75,14 @@ const broken = {
     ...locked,
     nightside: { thresholdBar: 0.1, collapses: true },
   },
+  "runaway-has-no-oceans": {
+    ...locked,
+    runaway: { limitAu: 0.2, lost: true },
+  },
+  "escaped-air-scores-zero": {
+    ...locked,
+    retention: { minEscapeKms: 20, retained: false },
+  },
   "star-temperature-matches": {
     ...locked,
     star: { ...locked.star, teffK: 5772 },

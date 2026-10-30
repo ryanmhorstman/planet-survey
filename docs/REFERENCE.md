@@ -65,6 +65,8 @@ Public Blob objects persist until an operator deletes them. Deleting a report or
 - **Star temperature** T_eff = 5772 K × (L/R★²)^¼, which sets the star's colour, the sky colour and the habitable zone.
 - **Habitable zone** from the Kopparapu et al. 2014 coefficients (conservative: runaway to maximum greenhouse; optimistic: recent Venus to early Mars), for 2600–7200 K stars.
 - **Moons**: stable out to half the Hill radius and outside the Roche limit (2.44 planet radii). A locked planet's synchronous orbit lies at 1.44 Hill radii, outside every stable orbit, so it holds no moon.
+- **Runaway greenhouse** (`physics-4`): sunward of the recent-Venus limit (Kopparapu et al. 2014) the oceans boil away and their hydrogen escapes, so the water phase reads "vapor favored", the globe shows dry basins, and the temperature and liquid-water parts of the score drop to zero. The temperature shown stays the simple energy balance, which is far too cool there.
+- **Atmosphere retention** (`physics-4`): the cosmic shoreline of Zahnle & Catling 2017, a line I ∝ v_esc⁴ normalized to 6.1 km/s at Earth's sunlight to fit the Solar System. A world below it cannot keep the assumed air, and the water, pressure and atmosphere parts of the score drop to zero.
 - A red-dwarf star-activity caveat beside the score (the score is unchanged), and a Kiang et al. 2007 dark-pigment clause on imagined red-dwarf vegetation.
 
 `lib/consistency.js` holds a list of cross-checks shown under **Model notes**: contradictions between parts of the model (bugs) and real tensions between models, such as a mild energy-balance temperature on an orbit sunward of the conservative habitable zone. Each rule has a test that breaks a world on purpose.
