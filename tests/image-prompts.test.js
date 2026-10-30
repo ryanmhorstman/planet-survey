@@ -487,6 +487,11 @@ test("a postcard is a poster with one tagline, and its tourist dresses for the w
   assert.equal(card(fixtures.locked)[1], "WHERE THE SUN NEVER SETS");
   assert.equal(card(fixtures.airless)[1], "NO AIR. NO CROWDS.");
   assert.equal(card(fixtures.gas)[1], "RIDE THE STORMS");
+  // Clouds hold no one up: a giant's tourist rides a balloon instead.
+  const [giant] = card(fixtures.gas);
+  assert.match(giant, /gondola of a hot-hydrogen balloon/);
+  assert.match(giant, /Nobody stands or walks on the clouds/);
+  assert.doesNotMatch(earth, /balloon/);
   assert.equal(card(fixtures.glacial)[1], "THE GREAT WHITE GETAWAY");
 });
 test("an aftermath shows the same place after its seas are gone, by the fate its star and size allow", () => {
