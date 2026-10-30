@@ -1661,6 +1661,49 @@ try {
     "Repeated surface clicks deduplicate; late imagery respects selection; modified reference survives refresh",
   );
   await views.close();
+  // Deep sea and night sky render on request, and only where the world has them.
+  const extra = await context({}, true),
+    ep = await extra.newPage(),
+    requested = [];
+  await extra.route("**/api/image", async (route) => {
+    requested.push(route.request().postDataJSON().view);
+    await route.fulfill({ json: { asset: surface } });
+  });
+  await extra.addInitScript((report) => {
+    if (!localStorage.getItem("psu7-reports-v2"))
+      localStorage.setItem(
+        "psu7-reports-v2",
+        JSON.stringify({ selected: report.id, reports: [report] }),
+      );
+  }, unfinished);
+  await ep.goto(origin);
+  await ep.locator("#planetImage").waitFor();
+  assert.deepEqual(requested, [], "Extra views rendered before being asked");
+  await ep.locator("#btnDeep").click();
+  await waitFor(
+    async () =>
+      (await ep.locator("#planetImage").getAttribute("src")) === surface.url,
+    "Deep-sea image did not load",
+  );
+  assert.equal(
+    await ep.locator("#btnDeep").getAttribute("aria-pressed"),
+    "true",
+  );
+  await ep.locator("#btnNight").click();
+  await waitFor(
+    () => requested.length === 2,
+    "Night-sky request did not begin",
+  );
+  assert.deepEqual(requested, ["deep", "night"]);
+  await ep.goto(`${origin}/?sample=kiln`);
+  await ep.locator("#planetImage").waitFor();
+  assert.ok(await ep.locator("#btnSurface").isVisible());
+  assert.ok(!(await ep.locator("#btnDeep").isVisible()));
+  assert.ok(!(await ep.locator("#btnNight").isVisible()));
+  results.push(
+    "Deep-sea and night-sky views render on request and hide where the world has none",
+  );
+  await extra.close();
   // A failed saved image reload must not buy another generation.
   const broken = await context({}, true),
     bp = await broken.newPage();

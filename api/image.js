@@ -2,6 +2,7 @@ import {
   validateSurvey,
   calculate,
   imagePrompt,
+  IMAGE_VIEWS,
   InputError,
   validateSeed,
 } from "../lib/planet.js";
@@ -50,8 +51,10 @@ export function createImageHandler({
       } catch (error) {
         throw new InputError(error.message);
       }
-      if (!["orbital", "surface"].includes(input.view))
-        throw new InputError("Choose orbital or surface view.");
+      if (!IMAGE_VIEWS.includes(input.view))
+        throw new InputError(
+          "Choose an orbital, surface, deep-sea or night-sky view.",
+        );
       const key = process.env.OPENAI_API_KEY || process.env.PLANET_OPENAI_KEY;
       if (!key)
         throw new ServiceError(
@@ -77,7 +80,7 @@ export function createImageHandler({
                 { ...physics, ...cartography.environment },
                 reference.view,
               )
-            : imagePrompt(params, physics, "surface"),
+            : imagePrompt(params, physics, input.view),
           n: 1,
           size: "1536x1024",
           quality: "medium",

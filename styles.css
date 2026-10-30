@@ -1608,6 +1608,7 @@ select:focus-visible {
 .view-toggle {
   position: static;
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   border: 0;
   padding: 12px 20px 0;
@@ -2796,8 +2797,9 @@ dialog.lightbox img {
   .view-toggle {
     justify-content: stretch;
   }
+  /* Up to four viewpoints: two per row on a phone. */
   .view-toggle-btn {
-    flex: 1;
+    flex: 1 1 40%;
   }
 }
 

@@ -179,6 +179,26 @@ test("image endpoint constructs prompts itself and stores only validated provide
   assert.match(sent.prompt, /ground-level camera/);
   assert.equal(sent.n, 1);
   assert.equal(response.body.asset.url, "/assets/sample-orbital.webp");
+  for (const view of ["deep", "night"]) {
+    await handler(req({ params: DEFAULTS, view }), res());
+    assert.match(
+      sent.prompt,
+      view === "deep" ? /hydrothermal vent field/ : /looking up at the sky/,
+    );
+  }
+  const hazy = res();
+  await handler(
+    req({
+      params: {
+        ...DEFAULTS,
+        atmosphere: "thick CO2 (Venus-like)",
+        pressureBar: 90,
+      },
+      view: "night",
+    }),
+    hazy,
+  );
+  assert.equal(hazy.statusCode, 400);
 });
 test("a cached image for the same seed and prompt skips the provider and the quota", async () => {
   const keys = [];

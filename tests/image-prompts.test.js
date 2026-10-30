@@ -9,6 +9,8 @@ import {
   waterState,
   starAppearance,
   giantClouds,
+  imageViews,
+  viewLabel,
 } from "../lib/planet.js";
 import { fieldNoteRequest, FIELD_NOTE_SYSTEM } from "../lib/prompts.js";
 const fixtures = {
@@ -290,4 +292,71 @@ test("a giant planet is banded, sized and coloured by its cloud chemistry", () =
     pl_eqt: 1500,
   });
   assert.match(visualSpec(giant, hot).terrain, /silicate cloud decks/);
+});
+
+test("deep-sea and night-sky views are offered only where they make sense", () => {
+  const views = (changes) => {
+    const p = { ...DEFAULTS, ...changes };
+    return imageViews(p, calculate(p));
+  };
+  assert.deepEqual(views({}), ["orbital", "surface", "deep", "night"]);
+  // Ice-covered oceans keep a dark sea beneath them; airless skies are clear.
+  assert.ok(views(fixtures.glacial).includes("deep"));
+  assert.deepEqual(views(fixtures.airless), ["orbital", "surface", "night"]);
+  assert.deepEqual(views(fixtures.gas), ["orbital", "surface", "night"]);
+  // A Venus-like overcast hides the stars and boils the oceans.
+  assert.deepEqual(views(fixtures.venus), ["orbital", "surface"]);
+  const venus = { ...DEFAULTS, ...fixtures.venus };
+  assert.throws(() => imagePrompt(venus, calculate(venus), "night"), {
+    message: /too hazy to see the stars/,
+  });
+  assert.throws(() => imagePrompt(venus, calculate(venus), "deep"), {
+    message: /no ocean/,
+  });
+  assert.throws(() => imagePrompt(DEFAULTS, calculate(DEFAULTS), "moon"));
+  const giant = { ...DEFAULTS, ...fixtures.gas };
+  assert.deepEqual(
+    ["orbital", "surface", "deep", "night"].map((view) =>
+      viewLabel(giant, calculate(giant), view),
+    ),
+    ["Orbital", "Cloud deck", "Deep sea", "Night sky"],
+  );
+});
+test("the deep sea shows vents in the dark, with life only as the biosphere setting allows", () => {
+  const prompt = (changes) => {
+    const p = { ...DEFAULTS, ...changes };
+    return imagePrompt(p, calculate(p), "deep");
+  };
+  const temperate = prompt({});
+  assert.match(temperate, /hydrothermal vent field/);
+  assert.match(temperate, /No sky, no water surface and no star are visible/);
+  assert.match(temperate, /recognizable as vent life/);
+  assert.doesNotMatch(temperate, /No animals/);
+  // Vent life feeds on chemistry, so it can be imagined under ice where the
+  // surface shows none.
+  const glacial = prompt({ ...fixtures.glacial, biosphere: "alien" });
+  assert.match(glacial, /sealed beneath a thick ice shell/);
+  assert.match(glacial, /ALIEN morphology is essential/);
+  const bare = prompt({ biosphere: "none" });
+  assert.match(bare, /The vents are bare/);
+  assert.match(bare, /No animals/);
+  assert.doesNotMatch(bare, /bioluminescence/);
+});
+test("the night sky follows the air, and a locked world's night is its far side", () => {
+  const prompt = (changes) => {
+    const p = { ...DEFAULTS, ...changes };
+    return imagePrompt(p, calculate(p), "night");
+  };
+  const temperate = prompt({});
+  assert.match(temperate, /no recognizable Earth constellations/);
+  assert.match(temperate, /The star is below the horizon/);
+  assert.match(temperate, /No moons.*No stellar disk/);
+  assert.match(temperate, /Silhouettes of the imagined vegetation/);
+  assert.match(prompt(fixtures.airless), /sharp, unflickering stars/);
+  assert.match(prompt(fixtures.gas), /lightning flashing deep inside it/);
+  const locked = prompt(fixtures.locked);
+  assert.match(locked, /permanent nightside: the star never rises/);
+  assert.match(locked, /permanently dark far hemisphere/);
+  assert.match(locked, /No plants grow on the permanent nightside/);
+  assert.doesNotMatch(locked, /Silhouettes of the imagined vegetation/);
 });
