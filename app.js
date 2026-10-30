@@ -41,6 +41,7 @@ import {
   seedQuery,
 } from "./lib/seed.js";
 import { runFieldResearcher } from "./lib/field-researcher.js";
+import { survival, earthComparison } from "./lib/visitor.js";
 
 const $ = (id) => document.getElementById(id);
 const state = {
@@ -529,6 +530,19 @@ function render() {
     $(label).textContent = tile.label;
     $(value).textContent = tile.value;
   }
+  const visit = survival(p, f);
+  $("visitHeadline").textContent = visit.headline;
+  $("visitReasons").replaceChildren(
+    ...visit.reasons.map((reason) =>
+      Object.assign(document.createElement("li"), { textContent: reason }),
+    ),
+  );
+  $("visitFacts").replaceChildren(
+    ...earthComparison(p, f).flatMap(({ label, value }) => [
+      Object.assign(document.createElement("dt"), { textContent: label }),
+      Object.assign(document.createElement("dd"), { textContent: value }),
+    ]),
+  );
   const locked = f.tidalLock?.locked === true;
   $("habScore").textContent =
     f.score == null ? "Not rated" : `${f.score} / 100`;

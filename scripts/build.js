@@ -55,6 +55,7 @@ export async function build(output = resolve(root, "dist"), env = process.env) {
     "lib/field-researcher.js",
     "lib/seed.js",
     "lib/consistency.js",
+    "lib/visitor.js",
   ]) {
     await mkdir(resolve(output, file, ".."), { recursive: true });
     await cp(resolve(root, file), resolve(output, file), { recursive: true });
