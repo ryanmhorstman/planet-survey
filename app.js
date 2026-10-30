@@ -15,7 +15,6 @@ import {
   paramsFromCatalog,
   validateParams,
   validateNarrative,
-  visualSpec,
   calculate,
   biosphereSpec,
   formatYears,
@@ -24,6 +23,9 @@ import {
   formatQuantity,
   surfaceWater,
   habitableZoneText,
+  IMAGE_VIEWS,
+  imageViews,
+  viewLabel,
 } from "./lib/planet.js";
 import {
   restoreReport,
@@ -58,6 +60,12 @@ const state = {
 };
 const active = () => state.reports.find((r) => r.id === state.activeId);
 const STORE = "psu7-reports-v2";
+const VIEW_BUTTONS = {
+  orbital: "btnOrbital",
+  surface: "btnSurface",
+  deep: "btnDeep",
+  night: "btnNight",
+};
 // Retain the experiment for development without exposing it in the public journey.
 const cartographyPreview = (() => {
   try {
@@ -121,6 +129,8 @@ function runtime(r) {
     analysis: "idle",
     orbital: "idle",
     surface: "idle",
+    deep: "idle",
+    night: "idle",
     errors: {},
   });
 }
@@ -627,14 +637,14 @@ function render() {
       return li;
     }),
   );
-  for (const view of ["orbital", "surface"]) {
-    const button = $(view === "orbital" ? "btnOrbital" : "btnSurface");
+  const views = imageViews(p, f);
+  for (const view of IMAGE_VIEWS) {
+    const button = $(VIEW_BUTTONS[view]);
+    button.hidden = !views.includes(view);
+    button.textContent = viewLabel(p, f, view);
     button.classList.toggle("active", state.view === view);
     button.setAttribute("aria-pressed", String(state.view === view));
   }
-  $("btnSurface").textContent = p.atmosphere.includes("hydrogen")
-    ? "Cloud deck"
-    : "Surface";
   $("stageOrbital").textContent = r.images.orbital
     ? "02 · Orbital available"
     : rt.orbital === "pending"
@@ -665,7 +675,7 @@ function render() {
   if (asset && !failed) {
     image.alt =
       REFERENCE_ASSETS[asset.url]?.alt ||
-      `${r.name} — imagined ${state.view === "orbital" ? "orbital" : visualSpec(p, f).view.toLowerCase()} illustration of a ${f.classification.split(" — ")[1]?.toLowerCase() || "fictional"} world.`;
+      `${r.name} — imagined ${viewLabel(p, f, state.view).toLowerCase()} illustration of a ${f.classification.split(" — ")[1]?.toLowerCase() || "fictional"} world.`;
     image.onerror = () => {
       if (image.dataset.token !== token || active()?.id !== r.id) return;
       rt[state.view] = "error";
@@ -996,7 +1006,7 @@ $("imageOpen").addEventListener("click", () => {
   if (!asset) return;
   showExpandedImage(
     asset,
-    `${r.name} · ${state.view === "surface" ? visualSpec(r.params, r.physics).view : "Orbital"}`,
+    `${r.name} · ${viewLabel(r.params, r.physics, state.view)}`,
     `${r.name.replace(/[^a-z0-9]/gi, "-")}-${state.view}.webp`,
   );
 });
@@ -1222,8 +1232,8 @@ function openParameters() {
   });
   $("parameterDetails").querySelector("summary").focus({ preventScroll: true });
 }
-$("btnOrbital").addEventListener("click", () => setView("orbital"));
-$("btnSurface").addEventListener("click", () => setView("surface"));
+for (const view of IMAGE_VIEWS)
+  $(VIEW_BUTTONS[view]).addEventListener("click", () => setView(view));
 $("imageRetry").addEventListener("click", () => {
   if (active()) void requestImage(active(), state.view);
 });
