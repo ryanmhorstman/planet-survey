@@ -2889,7 +2889,7 @@ body > .footer {
 }
 .world-choices {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   margin: 20px 0;
   border: 1px solid var(--gold-rule);
 }
@@ -2907,6 +2907,12 @@ body > .footer {
 }
 .world-choices button + button {
   border-left: 1px solid var(--gold-rule);
+}
+.world-choices button:nth-child(3n + 1) {
+  border-left: 0;
+}
+.world-choices button:nth-child(n + 4) {
+  border-top: 1px solid var(--gold-rule);
 }
 .world-choices button:hover {
   background: var(--surface);

@@ -145,6 +145,7 @@ try {
       ["viridia", "viridia"],
       ["tether", "tether"],
       ["kiln", "kiln"],
+      ["gyre", "gyre"],
       ["boreal", "sample"],
     ]) {
       await page.locator(`.showcase-nav [data-world="${key}"]`).click();
