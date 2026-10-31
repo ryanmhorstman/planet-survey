@@ -1576,23 +1576,6 @@ select:focus-visible {
 .report-header .text-btn {
   flex-shrink: 0;
 }
-.survey-stages {
-  display: flex;
-  list-style: none;
-  border-bottom: 1px solid var(--gold-rule);
-  background: var(--surface);
-}
-.survey-stages li {
-  flex: 1;
-  padding: 12px;
-  color: var(--ink-soft);
-  font-size: 10px;
-  text-align: center;
-  border-right: 1px solid var(--gold-rule);
-}
-.survey-stages .complete {
-  color: var(--ink);
-}
 .planet-view {
   display: block;
   aspect-ratio: auto;
@@ -1833,6 +1816,73 @@ progress::-moz-progress-bar {
 }
 .visit-facts dd {
   color: var(--ink-mid);
+}
+/* Provenance as a dot keyed to the footer legend. */
+.kind-dot {
+  display: inline-block;
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: 1px;
+  background: var(--ink-dim);
+}
+.kind-calculated {
+  background: #8a6c20;
+}
+.kind-estimated {
+  background: #2f7a72;
+}
+.kind-assumed {
+  background: #8a8170;
+}
+.kind-imagined {
+  background: #8a4a78;
+}
+.kind-legend {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+.kind-legend .kind-dot {
+  margin-right: 4px;
+}
+/* Both scores in one row. */
+.score-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+  gap: 16px 32px;
+}
+.score-item .hab-score,
+.score-item .esi-score {
+  font-family: "EB Garamond", serif;
+  font-size: 27px;
+}
+/* Physics first, then what is imagined. */
+.param-group {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.param-group + .param-group {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--gold-rule);
+}
+.param-group legend {
+  margin-bottom: 6px;
+  padding: 0;
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.mobile-bar {
+  display: none;
 }
 .note-section + .note-section {
   margin-top: 0.45em;
@@ -2203,6 +2253,9 @@ dialog.lightbox img {
     order: 0;
     padding: 24px;
   }
+  .report-first .panel-header {
+    display: none;
+  }
   .unit-name {
     font-size: 34px;
   }
@@ -2233,6 +2286,45 @@ dialog.lightbox img {
   }
   .right-panel {
     order: 4;
+  }
+  .mobile-bar:not([hidden]) {
+    display: flex;
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    background: var(--ink);
+    border-top: 1px solid var(--gold-rule);
+  }
+  .mobile-bar button {
+    flex: 1;
+    min-height: 48px;
+    border: 0;
+    background: transparent;
+    color: #f2ead8;
+    font-family: "Space Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .mobile-bar button + button {
+    border-left: 1px solid rgba(200, 168, 80, 0.3);
+  }
+  .mobile-bar button:focus-visible {
+    outline: 2px solid var(--gold-light);
+    outline-offset: -4px;
+  }
+  .view-toggle {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .view-toggle::-webkit-scrollbar {
+    display: none;
+  }
+  .view-toggle-btn {
+    flex: 0 0 auto;
   }
   .report-first .right-panel {
     order: -1;
@@ -2324,10 +2416,6 @@ dialog.lightbox img {
   .report-header h1 {
     font-size: 34px;
   }
-  .survey-stages li {
-    font-size: 9px;
-    padding: 12px 6px;
-  }
   .image-caption {
     font-size: 9px;
     gap: 8px;
@@ -2368,11 +2456,15 @@ dialog.lightbox img {
     margin-top: 12px;
   }
   .action-bar {
-    flex-direction: column;
+    flex-direction: row;
+    gap: 6px;
     padding: 16px 20px;
   }
-  .action-btn {
-    flex: auto;
+  .action-bar .action-btn {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 4px;
+    font-size: 10px;
   }
   .secondary-controls {
     flex-direction: column;
@@ -2824,8 +2916,8 @@ dialog.lightbox img {
   .image-caption {
     font-size: 11px;
   }
-  .view-toggle {
-    justify-content: stretch;
+  .score-pair {
+    grid-template-columns: minmax(0, 1fr);
   }
   .visit-facts {
     grid-template-columns: minmax(0, 1fr);
@@ -2833,10 +2925,6 @@ dialog.lightbox img {
   }
   .visit-facts dd {
     margin-bottom: 10px;
-  }
-  /* Up to four viewpoints: two per row on a phone. */
-  .view-toggle-btn {
-    flex: 1 1 40%;
   }
 }
 
@@ -2849,6 +2937,13 @@ body > .footer {
 @media (forced-colors: active) {
   .topbar-id {
     color: LinkText;
+  }
+  .mobile-bar:not([hidden]) {
+    background: Canvas;
+  }
+  .mobile-bar button {
+    background: ButtonFace;
+    color: ButtonText;
   }
   .generate-btn,
   .generate-btn:hover {
@@ -3045,12 +3140,20 @@ body > .footer {
     padding: 6px 14px;
     gap: 2px;
   }
+  .showcase-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .showcase-nav::-webkit-scrollbar {
+    display: none;
+  }
   .showcase-nav > span {
-    width: 100%;
-    margin: 6px 0 0;
+    flex: none;
+    margin: 0 6px 0 0;
   }
   .showcase-nav button {
-    flex: 1;
+    flex: none;
   }
 }
 @media (forced-colors: active) {

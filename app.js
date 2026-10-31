@@ -520,6 +520,7 @@ function render() {
     asset = r.images[state.view];
   $("idleState").hidden = true;
   $("resultState").hidden = false;
+  $("mobileBar").hidden = false;
   syncInstrument();
   $("reportOrigin").textContent = r.sample
     ? "REFERENCE WORLD · ARTIST INTERPRETATION"
@@ -540,8 +541,19 @@ function render() {
     ["density", "densityLabel", "statDensity"],
     ["biosphere", "biosphereLabel", "statBiosphere"],
   ])) {
-    const tile = statTile(key, p, f, r.catalog);
-    $(label).textContent = tile.label;
+    const tile = statTile(key, p, f, r.catalog),
+      [name, , ...extra] = tile.label.split(" · ");
+    $(label).replaceChildren(
+      Object.assign(document.createElement("span"), {
+        className: `kind-dot kind-${tile.kind}`,
+        title: tile.kind.charAt(0).toUpperCase() + tile.kind.slice(1),
+      }),
+      [name, ...extra].join(" · "),
+      Object.assign(document.createElement("span"), {
+        className: "sr-only",
+        textContent: ` (${tile.kind})`,
+      }),
+    );
     $(value).textContent = tile.value;
   }
   const visit = survival(p, f);
@@ -678,17 +690,15 @@ function render() {
     button.textContent = viewLabel(p, f, view);
     button.classList.toggle("active", state.view === view);
     button.setAttribute("aria-pressed", String(state.view === view));
+    const row = /** @type {HTMLElement} */ (button.parentElement);
+    if (
+      state.view === view &&
+      (button.offsetLeft < row.scrollLeft ||
+        button.offsetLeft + button.offsetWidth >
+          row.scrollLeft + row.clientWidth)
+    )
+      row.scrollLeft = button.offsetLeft - 16;
   }
-  $("stageOrbital").textContent = r.images.orbital
-    ? "02 · Orbital available"
-    : rt.orbital === "pending"
-      ? "02 · Rendering orbit"
-      : "02 · Orbital view";
-  $("stageSurface").textContent = r.images.surface
-    ? "03 · View available"
-    : rt.surface === "pending"
-      ? "03 · Rendering view"
-      : "03 · Explore closer";
   const image = $("planetImage"),
     failed = rt[state.view] === "error";
   image.hidden = !asset || failed;
@@ -1277,6 +1287,9 @@ function openParameters() {
 }
 for (const view of IMAGE_VIEWS)
   $(VIEW_BUTTONS[view]).addEventListener("click", () => setView(view));
+$("mobileEdit").addEventListener("click", openParameters);
+$("mobileRandom").addEventListener("click", () => $("randomizeBtn").click());
+$("mobileShare").addEventListener("click", () => $("shareBtn").click());
 $("imageRetry").addEventListener("click", () => {
   if (active()) void requestImage(active(), state.view);
 });
@@ -1564,6 +1577,7 @@ document
     syncInstrument();
     $("idleState").hidden = false;
     $("resultState").hidden = true;
+    $("mobileBar").hidden = true;
     $("app").classList.remove("report-first");
     notice("");
     setControls(DEFAULTS);

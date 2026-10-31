@@ -1704,6 +1704,44 @@ try {
     "Deep-sea and night-sky views render on request and hide where the world has none",
   );
   await extra.close();
+  // On a phone, views and reference worlds stay in one row and the main
+  // actions stay in reach at the bottom of the screen.
+  const phone = await context({ viewport: { width: 390, height: 844 } }),
+    pp = await phone.newPage();
+  await pp.goto(`${origin}/?sample=viridia`);
+  await pp.locator("#planetImage").waitFor();
+  await noOverflow(pp);
+  for (const row of [".view-toggle", ".showcase-nav"])
+    assert.ok(
+      await pp.locator(row).evaluate((el) => {
+        const centers = [...el.children]
+          .filter((child) => child.offsetParent !== null)
+          .map((child) => {
+            const box = child.getBoundingClientRect();
+            return (box.top + box.bottom) / 2;
+          });
+        return Math.max(...centers) - Math.min(...centers) < 4;
+      }),
+      `${row} wrapped onto a second row`,
+    );
+  const bar = await pp.locator("#mobileBar").boundingBox();
+  assert.ok(
+    bar && Math.round(bar.y + bar.height) <= 844,
+    "Action bar is off screen",
+  );
+  await pp.locator("#mobileEdit").click();
+  await waitFor(
+    () => pp.locator("#parameterDetails").evaluate((d) => d.open),
+    "Edit world did not open the settings",
+  );
+  assert.deepEqual(await pp.locator(".param-group legend").allTextContents(), [
+    "The world",
+    "Imagined",
+  ]);
+  results.push(
+    "Phone layout keeps one-row views, one-row worlds and a reachable action bar",
+  );
+  await phone.close();
   // A failed saved image reload must not buy another generation.
   const broken = await context({}, true),
     bp = await broken.newPage();
