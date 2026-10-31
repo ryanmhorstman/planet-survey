@@ -44,7 +44,14 @@ for (const [name, changes] of Object.entries(fixtures))
         assert.ok(prompt.includes(`${section}. `));
       for (const field of ["geography", "terrain", "sky", "biosphere"])
         assert.ok(prompt.includes(spec[field]), field);
-      assert.match(prompt, /No moons.*rings, settlements, spacecraft/);
+      // Moons appear only in a surface sky that has them.
+      if (view === "surface" && spec.skyMoons.length) {
+        assert.match(
+          prompt,
+          /No neighboring planets, rings, settlements, spacecraft/,
+        );
+        assert.match(prompt, /apparent width of Earth's Moon/);
+      } else assert.match(prompt, /No moons.*rings, settlements, spacecraft/);
       assert.match(prompt, /No recognizable Earth continents/);
       if (name === "airless")
         assert.match(prompt, /black sky.*no clouds or atmospheric haze/);

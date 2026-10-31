@@ -24,6 +24,7 @@ test("production build emits absolute social metadata and only public files", as
       "geography-worker.js",
       "geography.js",
       "globe.js",
+      "moons.js",
       "orbital-record.js",
       "planet.js",
       "region.js",

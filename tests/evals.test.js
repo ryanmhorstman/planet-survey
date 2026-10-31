@@ -70,7 +70,7 @@ test("contradictions with the data panel are caught", () => {
   );
   assert.deepEqual(
     failed(sample({ biosphere: "none" }, "Two moons hang over the bay.")),
-    ["no-extra-bodies"],
+    ["no-unlisted-moons"],
   );
   assert.deepEqual(
     failed(sample({ biosphere: "none" }, "Noon reaches 40 °C on the plain.")),

@@ -78,7 +78,9 @@ test("the Earth comparison reads Earth back as Earth and scales with the world",
   );
   const tether = sampleReport("tether");
   assert.match(
-    earthComparison(tether.params, tether.physics).at(-1).value,
+    earthComparison(tether.params, tether.physics).find(
+      (fact) => fact.label === "The star",
+    ).value,
     /2.9× as wide as the Sun/,
   );
   const light = facts({ massEarth: 0.1, radiusEarth: 0.5 });
