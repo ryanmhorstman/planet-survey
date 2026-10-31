@@ -42,6 +42,7 @@ const world = {
   tilt_deg: 20,
   rotation_hours: 30,
   biosphere: "none",
+  civilization: "none",
 };
 const toolUse = (id, name, input) => ({ type: "tool_use", id, name, input });
 const turn = (stop_reason, ...content) => ({ stop_reason, content });
