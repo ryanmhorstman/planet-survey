@@ -108,10 +108,29 @@ test("skies, field notes and the visitor section show exactly the moons there ar
   assert.match(surface, /\nNo neighboring planets/);
   // From orbit they lie far outside the frame.
   assert.match(imagePrompt(g, gf, "orbital"), /No moons, neighboring planets/);
+  // Drawn as a camera records them, not pasted on.
+  assert.match(surface, /All are lit from the same side/);
+  assert.match(surface, /washed out by the bright sky/);
+  const night = imagePrompt(g, gf, "night");
+  assert.match(night, /one real exposure/);
+  assert.match(night, /never a crisp, high-contrast cutout/);
+  const [rock, rf] = world({ tilt: 4, water: 60, biosphere: "alien" });
+  assert.equal(moonSystem(rock, rf).moons[0]?.kind, "rocky");
   assert.match(
-    imagePrompt(g, gf, "night"),
-    /moonlight softly lights the scene/,
+    imagePrompt(rock, rf, "night"),
+    /not the familiar face of Earth's Moon/,
   );
+  const [bare, bf] = world({
+    atmosphere: "none (airless body)",
+    pressureBar: 0,
+    water: 0,
+    tilt: 4,
+  });
+  if (moonSystem(bare, bf).moons.length)
+    assert.match(
+      imagePrompt(bare, bf, "surface"),
+      /crisp against the black sky/,
+    );
   // A moonless world keeps its bans; an overcast one hides any moons.
   const [plain, pf] = world({ tilt: 1 });
   if (!moonSystem(plain, pf).moons.length)
