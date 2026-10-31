@@ -92,6 +92,7 @@ http
           "lib/seed.js",
           "lib/consistency.js",
           "lib/visitor.js",
+          "lib/moons.js",
           "assets/vendor/three.core.js",
           "assets/vendor/three.module.js",
           "assets/vendor/OrbitControls.js",

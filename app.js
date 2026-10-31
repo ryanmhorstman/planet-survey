@@ -44,6 +44,7 @@ import {
 } from "./lib/seed.js";
 import { runFieldResearcher } from "./lib/field-researcher.js";
 import { survival, earthComparison } from "./lib/visitor.js";
+import { moonSystem, describeMoons } from "./lib/moons.js";
 
 const $ = (id) => document.getElementById(id);
 const state = {
@@ -618,7 +619,7 @@ function render() {
     addFact("Habitable zone", zone.charAt(0).toUpperCase() + zone.slice(1));
     addFact(
       "Moons",
-      `${f.moons.reason.charAt(0).toUpperCase() + f.moons.reason.slice(1)}. Stable orbits reach about half the Hill radius (${Math.round(f.moons.hillPlanetRadii)} planet radii); the Roche limit is ${f.moons.rochePlanetRadii} planet radii.`,
+      `${describeMoons(f, moonSystem(p, f))} ${f.moons.reason.charAt(0).toUpperCase() + f.moons.reason.slice(1)}. Stable orbits reach about half the Hill radius (${Math.round(f.moons.hillPlanetRadii)} planet radii); the Roche limit is ${f.moons.rochePlanetRadii} planet radii.`,
     );
   }
   addFact(
