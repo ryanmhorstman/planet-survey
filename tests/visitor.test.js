@@ -69,9 +69,7 @@ test("the Earth comparison reads Earth back as Earth and scales with the world",
   const earth = facts({});
   assert.match(earth["Your weight"], /feel like 70 kg/);
   assert.match(earth["Jumping"], /just as high/);
-  assert.match(earth["A year"], /^365 Earth days/);
   assert.match(earth["Your age"], /you'd be 30 here/);
-  assert.match(earth["A day"], /24 hours/);
   assert.equal(
     earth["The star"],
     "It looks about the size of the Sun, and the planet gets about Earth's sunlight.",
@@ -85,6 +83,7 @@ test("the Earth comparison reads Earth back as Earth and scales with the world",
   );
   const light = facts({ massEarth: 0.1, radiusEarth: 0.5 });
   assert.match(light["Jumping"], /jump 2.5× as high/);
-  const far = facts({ orbital: "outer edge (very cold)" });
-  assert.match(far["A year"], /Earth years/);
+  // Year and day live in the stat tiles, not here.
+  assert.equal(earth["A year"], undefined);
+  assert.equal(earth["A day"], undefined);
 });

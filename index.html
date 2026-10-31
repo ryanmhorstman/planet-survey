@@ -210,11 +210,6 @@
             </button>
           </nav>
           <p class="page-notice" id="reportServiceNotice" hidden></p>
-          <ol class="survey-stages" aria-label="Survey stages">
-            <li id="stageModel">01 · Model calculated</li>
-            <li id="stageOrbital">02 · Orbital view</li>
-            <li id="stageSurface">03 · Surface view</li>
-          </ol>
           <div
             class="instrument-tabs"
             id="instrumentTabs"
@@ -412,31 +407,48 @@
               pressure, air and gravity and textbook human limits.
             </p>
           </section>
-          <section class="hab-section" aria-labelledby="suitabilityTitle">
-            <div class="hab-row">
-              <h2 class="hab-label" id="suitabilityTitle">
-                Surface Environment Index
-              </h2>
-              <span class="hab-score" id="habScore"></span>
+          <section class="hab-section" aria-label="Scores">
+            <div class="score-pair">
+              <div class="score-item">
+                <div class="hab-row">
+                  <h2 class="hab-label" id="suitabilityTitle">
+                    Surface environment
+                  </h2>
+                  <span class="hab-score" id="habScore"></span>
+                </div>
+                <progress
+                  id="habFill"
+                  max="100"
+                  value="0"
+                  aria-labelledby="suitabilityTitle"
+                ></progress>
+              </div>
+              <div class="score-item">
+                <div class="hab-row">
+                  <h2 class="hab-label" id="esiTitle">Earth similarity</h2>
+                  <span class="esi-score" id="esiScore"></span>
+                </div>
+                <progress
+                  id="esiFill"
+                  max="1"
+                  value="0"
+                  aria-labelledby="esiTitle"
+                ></progress>
+              </div>
             </div>
-            <progress
-              id="habFill"
-              max="100"
-              value="0"
-              aria-labelledby="suitabilityTitle"
-            ></progress>
             <p
               class="score-explanation score-caveat"
               id="activityCaveat"
               hidden
             ></p>
-            <p class="score-explanation">
-              Temperature, water phase, pressure and atmosphere assumptions
-              only. Even 100/100 does not imply Earth-like gravity,
-              habitability, biological viability or human safety.
-            </p>
             <details class="method-details">
-              <summary>What goes into this score?</summary>
+              <summary>What do these scores mean?</summary>
+              <p>
+                Surface environment uses temperature, water phase, pressure and
+                atmosphere assumptions only. Even 100/100 does not imply
+                Earth-like gravity, habitability, biological viability or human
+                safety.
+              </p>
               <ul id="scoreFactors"></ul>
               <p>
                 Temperature: 40 points; exposed liquid water: 25; pressure: 20;
@@ -447,21 +459,12 @@
                 biological viability are not evaluated. Seasonal extremes,
                 atmospheric escape and geological evolution are not simulated.
               </p>
+              <p>
+                Earth similarity compares radius, density, escape velocity and
+                modeled temperature with Earth's. Similarity does not establish
+                habitability.
+              </p>
             </details>
-            <div class="hab-row esi-row">
-              <h2 class="hab-label" id="esiTitle">Earth Similarity Index</h2>
-              <span class="esi-score" id="esiScore"></span>
-            </div>
-            <progress
-              id="esiFill"
-              max="1"
-              value="0"
-              aria-labelledby="esiTitle"
-            ></progress>
-            <p class="score-explanation">
-              Similarity in radius, density, escape velocity and modeled
-              temperature. Similarity does not establish habitability.
-            </p>
           </section>
           <details class="provenance">
             <summary>Evidence, assumptions & model limits</summary>
@@ -558,217 +561,235 @@
               <button type="button" class="text-btn" id="detachCatalog" hidden>
                 Create a fictional variation
               </button>
-              <div class="param">
-                <label class="param-label" for="starType"
-                  >Star classification</label
-                >
-                <select class="param-select" id="starType" name="starType">
-                  <option value="G-type (Sun-like)">G-type — Sun-like</option>
-                  <option value="K-type (orange dwarf)">
-                    K-type — Orange dwarf
-                  </option>
-                  <option value="M-type (red dwarf)">M-type — Red dwarf</option>
-                  <option value="F-type (yellow-white)">
-                    F-type — Yellow-white
-                  </option>
-                  <option value="binary star system">
-                    Binary — simplified system
-                  </option>
-                </select>
-              </div>
-              <div class="param">
-                <label class="param-label" for="orbitalZone"
-                  >Orbital zone assumption</label
-                >
-                <select class="param-select" id="orbitalZone" name="orbital">
-                  <option value="inner edge (very hot)">
-                    Inner edge — hot
-                  </option>
-                  <option value="inner habitable zone">
-                    Inner habitable zone
-                  </option>
-                  <option value="middle habitable zone" selected>
-                    Middle habitable zone
-                  </option>
-                  <option value="outer habitable zone">
-                    Outer habitable zone
-                  </option>
-                  <option value="outer edge (very cold)">
-                    Outer edge — cold
-                  </option>
-                </select>
-              </div>
-              <div class="param">
-                <label class="param-label" for="atmosphere"
-                  >Atmosphere assumption</label
-                >
-                <select class="param-select" id="atmosphere" name="atmosphere">
-                  <option value="nitrogen-oxygen (Earth-like)">
-                    N₂/O₂ — Earth-like mixture
-                  </option>
-                  <option value="thick CO2 (Venus-like)">CO₂ — dense</option>
-                  <option value="thin nitrogen">N₂ — thin</option>
-                  <option value="methane-rich">CH₄ — rich</option>
-                  <option value="hydrogen-helium envelope">
-                    H₂/He — gas envelope
-                  </option>
-                  <option value="none (airless body)">None — airless</option>
-                </select>
-              </div>
-              <div class="param">
-                <label class="param-label" for="imaginedBiosphere"
-                  >Imagined biosphere</label
-                >
-                <select
-                  class="param-select"
-                  id="imaginedBiosphere"
-                  name="biosphere"
-                  aria-describedby="biosphereHelp"
-                >
-                  <option value="none">None — mineral worlds</option>
-                  <option value="familiar" selected>
-                    Familiar — vegetation-like forms
-                  </option>
-                  <option value="alien">Alien — unfamiliar biology</option>
-                </select>
-                <p class="field-hint" id="biosphereHelp">
-                  Invented biology, not a life prediction. Conditions guide its
-                  appearance.
-                </p>
-              </div>
-              <div class="param">
-                <label class="param-label" for="imaginedCivilization"
-                  >Imagined civilization</label
-                >
-                <select
-                  class="param-select"
-                  id="imaginedCivilization"
-                  name="civilization"
-                  aria-describedby="civilizationHelp"
-                >
-                  <option value="none" selected>None — untouched</option>
-                  <option value="ruins">Ruins — long abandoned</option>
-                  <option value="villages">Villages — scattered</option>
-                  <option value="cities">Cities</option>
-                  <option value="global">Planet-wide</option>
-                </select>
-                <p class="field-hint" id="civilizationHelp">
-                  Invented, not a prediction. Gravity, air, ice and oceans shape
-                  how it builds.
-                </p>
-              </div>
-              <div class="param">
-                <label class="param-label" for="waterCoverage"
-                  >Water / ice inventory</label
-                >
-                <div class="slider-row">
-                  <input
-                    type="range"
-                    class="param-slider"
-                    id="waterCoverage"
-                    name="water"
-                    min="0"
-                    max="100"
-                    value="70"
-                    aria-describedby="waterHelp"
-                  /><output class="slider-val" id="waterVal" for="waterCoverage"
-                    >70%</output
+              <fieldset class="param-group">
+                <legend>The world</legend>
+                <div class="param">
+                  <label class="param-label" for="starType"
+                    >Star classification</label
                   >
+                  <select class="param-select" id="starType" name="starType">
+                    <option value="G-type (Sun-like)">G-type — Sun-like</option>
+                    <option value="K-type (orange dwarf)">
+                      K-type — Orange dwarf
+                    </option>
+                    <option value="M-type (red dwarf)">
+                      M-type — Red dwarf
+                    </option>
+                    <option value="F-type (yellow-white)">
+                      F-type — Yellow-white
+                    </option>
+                    <option value="binary star system">
+                      Binary — simplified system
+                    </option>
+                  </select>
                 </div>
-                <p class="field-hint" id="waterHelp">
-                  Assumed coverage; the model estimates its phase.
-                </p>
-              </div>
-              <div class="param">
-                <label class="param-label" for="planetMass"
-                  >Planetary mass</label
-                >
-                <div class="slider-row">
-                  <input
-                    type="range"
-                    class="param-slider"
-                    id="planetMass"
-                    name="massEarth"
-                    min="0.1"
-                    max="3"
-                    step="0.1"
-                    value="1"
-                  /><output class="slider-val" id="massVal" for="planetMass"
-                    >1 × Earth</output
+                <div class="param">
+                  <label class="param-label" for="orbitalZone"
+                    >Orbital zone assumption</label
                   >
+                  <select class="param-select" id="orbitalZone" name="orbital">
+                    <option value="inner edge (very hot)">
+                      Inner edge — hot
+                    </option>
+                    <option value="inner habitable zone">
+                      Inner habitable zone
+                    </option>
+                    <option value="middle habitable zone" selected>
+                      Middle habitable zone
+                    </option>
+                    <option value="outer habitable zone">
+                      Outer habitable zone
+                    </option>
+                    <option value="outer edge (very cold)">
+                      Outer edge — cold
+                    </option>
+                  </select>
                 </div>
-              </div>
-              <div class="param">
-                <label class="param-label" for="planetRadius"
-                  >Planetary radius</label
-                >
-                <div class="slider-row">
-                  <input
-                    type="range"
-                    class="param-slider"
-                    id="planetRadius"
-                    name="radiusEarth"
-                    min="0.5"
-                    max="2.5"
-                    step="0.1"
-                    value="1"
-                  /><output class="slider-val" id="radiusVal" for="planetRadius"
-                    >1 × Earth</output
+                <div class="param">
+                  <label class="param-label" for="atmosphere"
+                    >Atmosphere assumption</label
                   >
-                </div>
-              </div>
-              <div class="param">
-                <label class="param-label" for="axialTilt"
-                  >Axial tilt assumption</label
-                >
-                <div class="slider-row">
-                  <input
-                    type="range"
-                    class="param-slider"
-                    id="axialTilt"
-                    name="tilt"
-                    min="0"
-                    max="90"
-                    value="23"
-                  /><output class="slider-val" id="tiltVal" for="axialTilt"
-                    >23°</output
+                  <select
+                    class="param-select"
+                    id="atmosphere"
+                    name="atmosphere"
                   >
+                    <option value="nitrogen-oxygen (Earth-like)">
+                      N₂/O₂ — Earth-like mixture
+                    </option>
+                    <option value="thick CO2 (Venus-like)">CO₂ — dense</option>
+                    <option value="thin nitrogen">N₂ — thin</option>
+                    <option value="methane-rich">CH₄ — rich</option>
+                    <option value="hydrogen-helium envelope">
+                      H₂/He — gas envelope
+                    </option>
+                    <option value="none (airless body)">None — airless</option>
+                  </select>
                 </div>
-              </div>
-              <div class="param">
-                <label class="param-label" for="rotationHours"
-                  >Rotation period assumption</label
-                >
-                <div class="number-row">
-                  <input
-                    id="rotationHours"
-                    name="rotationHours"
-                    type="number"
-                    min="1"
-                    max="1000000"
-                    step="any"
-                    value="24"
-                    required
-                  /><span>Earth hours</span>
+                <div class="param">
+                  <label class="param-label" for="waterCoverage"
+                    >Water / ice inventory</label
+                  >
+                  <div class="slider-row">
+                    <input
+                      type="range"
+                      class="param-slider"
+                      id="waterCoverage"
+                      name="water"
+                      min="0"
+                      max="100"
+                      value="70"
+                      aria-describedby="waterHelp"
+                    /><output
+                      class="slider-val"
+                      id="waterVal"
+                      for="waterCoverage"
+                      >70%</output
+                    >
+                  </div>
+                  <p class="field-hint" id="waterHelp">
+                    Assumed coverage; the model estimates its phase.
+                  </p>
                 </div>
-              </div>
-              <div class="param">
-                <label class="param-label" for="pressureBar"
-                  >Surface pressure assumption</label
-                >
-                <div class="number-row">
-                  <input
-                    id="pressureBar"
-                    name="pressureBar"
-                    type="number"
-                    min="0"
-                    max="1000"
-                    step="any"
-                    value="1"
-                    required
-                  /><span>bar</span>
+                <div class="param">
+                  <label class="param-label" for="planetMass"
+                    >Planetary mass</label
+                  >
+                  <div class="slider-row">
+                    <input
+                      type="range"
+                      class="param-slider"
+                      id="planetMass"
+                      name="massEarth"
+                      min="0.1"
+                      max="3"
+                      step="0.1"
+                      value="1"
+                    /><output class="slider-val" id="massVal" for="planetMass"
+                      >1 × Earth</output
+                    >
+                  </div>
                 </div>
-              </div>
+                <div class="param">
+                  <label class="param-label" for="planetRadius"
+                    >Planetary radius</label
+                  >
+                  <div class="slider-row">
+                    <input
+                      type="range"
+                      class="param-slider"
+                      id="planetRadius"
+                      name="radiusEarth"
+                      min="0.5"
+                      max="2.5"
+                      step="0.1"
+                      value="1"
+                    /><output
+                      class="slider-val"
+                      id="radiusVal"
+                      for="planetRadius"
+                      >1 × Earth</output
+                    >
+                  </div>
+                </div>
+                <div class="param">
+                  <label class="param-label" for="axialTilt"
+                    >Axial tilt assumption</label
+                  >
+                  <div class="slider-row">
+                    <input
+                      type="range"
+                      class="param-slider"
+                      id="axialTilt"
+                      name="tilt"
+                      min="0"
+                      max="90"
+                      value="23"
+                    /><output class="slider-val" id="tiltVal" for="axialTilt"
+                      >23°</output
+                    >
+                  </div>
+                </div>
+                <div class="param">
+                  <label class="param-label" for="rotationHours"
+                    >Rotation period assumption</label
+                  >
+                  <div class="number-row">
+                    <input
+                      id="rotationHours"
+                      name="rotationHours"
+                      type="number"
+                      min="1"
+                      max="1000000"
+                      step="any"
+                      value="24"
+                      required
+                    /><span>Earth hours</span>
+                  </div>
+                </div>
+                <div class="param">
+                  <label class="param-label" for="pressureBar"
+                    >Surface pressure assumption</label
+                  >
+                  <div class="number-row">
+                    <input
+                      id="pressureBar"
+                      name="pressureBar"
+                      type="number"
+                      min="0"
+                      max="1000"
+                      step="any"
+                      value="1"
+                      required
+                    /><span>bar</span>
+                  </div>
+                </div>
+              </fieldset>
+              <fieldset class="param-group">
+                <legend>Imagined</legend>
+                <div class="param">
+                  <label class="param-label" for="imaginedBiosphere"
+                    >Imagined biosphere</label
+                  >
+                  <select
+                    class="param-select"
+                    id="imaginedBiosphere"
+                    name="biosphere"
+                    aria-describedby="biosphereHelp"
+                  >
+                    <option value="none">None — mineral worlds</option>
+                    <option value="familiar" selected>
+                      Familiar — vegetation-like forms
+                    </option>
+                    <option value="alien">Alien — unfamiliar biology</option>
+                  </select>
+                  <p class="field-hint" id="biosphereHelp">
+                    Invented biology, not a life prediction. Conditions guide
+                    its appearance.
+                  </p>
+                </div>
+                <div class="param">
+                  <label class="param-label" for="imaginedCivilization"
+                    >Imagined civilization</label
+                  >
+                  <select
+                    class="param-select"
+                    id="imaginedCivilization"
+                    name="civilization"
+                    aria-describedby="civilizationHelp"
+                  >
+                    <option value="none" selected>None — untouched</option>
+                    <option value="ruins">Ruins — long abandoned</option>
+                    <option value="villages">Villages — scattered</option>
+                    <option value="cities">Cities</option>
+                    <option value="global">Planet-wide</option>
+                  </select>
+                  <p class="field-hint" id="civilizationHelp">
+                    Invented, not a prediction. Gravity, air, ice and oceans
+                    shape how it builds.
+                  </p>
+                </div>
+              </fieldset>
               <p class="control-note">
                 These parameters describe an educational scenario. They do not
                 establish a habitable world or a detected biosphere.
@@ -798,9 +819,19 @@
         </div>
       </aside>
     </div>
+    <nav class="mobile-bar" id="mobileBar" aria-label="Report actions" hidden>
+      <button type="button" id="mobileEdit">✎ Edit world</button
+      ><button type="button" id="mobileRandom">⚄ Randomize</button
+      ><button type="button" id="mobileShare">◈ Share</button>
+    </nav>
     <footer class="footer">
       <span>PSU-7 // AN EXPLORATORY FICTION</span
-      ><span>CALCULATED · ESTIMATED · IMAGINED</span>
+      ><span class="kind-legend"
+        ><span class="kind-dot kind-calculated"></span>Calculated
+        <span class="kind-dot kind-estimated"></span>Estimated
+        <span class="kind-dot kind-assumed"></span>Assumed
+        <span class="kind-dot kind-imagined"></span>Imagined</span
+      >
     </footer>
     <div
       class="sr-only"
