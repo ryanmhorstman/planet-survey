@@ -26,6 +26,8 @@ import {
   IMAGE_VIEWS,
   imageViews,
   viewLabel,
+  CIVILIZATIONS,
+  civilizationSpec,
 } from "./lib/planet.js";
 import {
   restoreReport,
@@ -94,6 +96,7 @@ const fields = {
   rotationHours: "rotationHours",
   pressureBar: "pressureBar",
   biosphere: "imaginedBiosphere",
+  civilization: "imaginedCivilization",
 };
 const format = (n, digits = 2) =>
   new Intl.NumberFormat("en", { maximumFractionDigits: digits }).format(n);
@@ -259,7 +262,13 @@ function readControls() {
     Object.fromEntries(
       Object.entries(fields).map(([key, id]) => [
         key,
-        ["starType", "orbital", "atmosphere", "biosphere"].includes(key)
+        [
+          "starType",
+          "orbital",
+          "atmosphere",
+          "biosphere",
+          "civilization",
+        ].includes(key)
           ? $(id).value
           : $(id).valueAsNumber,
       ]),
@@ -625,6 +634,12 @@ function render() {
     "Imagined biosphere",
     `${p.biosphere.charAt(0).toUpperCase() + p.biosphere.slice(1)} mode. ${biology.present ? `${biology.palette}; ${biology.forms}. Artistic choices, not detected life.${biology.pigmentNote ? ` ${biology.pigmentNote}` : ""}` : biology.reason}`,
   );
+  const civilization = civilizationSpec(p, f);
+  if (civilization)
+    addFact(
+      "Imagined civilization",
+      `${civilization.summary.charAt(0).toUpperCase() + civilization.summary.slice(1)}. Invented art direction: it does not change the physics or scores.`,
+    );
   addFact(
     "Rotation assumption",
     locked
@@ -918,12 +933,14 @@ async function generate() {
     state.seed != null &&
     !state.catalog &&
     JSON.stringify(params) ===
-      JSON.stringify(paramsFromSeed(state.seed, params.biosphere))
+      JSON.stringify(
+        paramsFromSeed(state.seed, params.biosphere, params.civilization),
+      )
       ? state.seed
       : null;
   const r =
     seed != null
-      ? seededReport(seed, params.biosphere)
+      ? seededReport(seed, params.biosphere, params.civilization)
       : createReport({
           params,
           catalog: state.catalog,
@@ -1108,6 +1125,7 @@ async function browse() {
             {
               ...paramsFromCatalog(catalog),
               biosphere: $("imaginedBiosphere").value,
+              civilization: $("imaginedCivilization").value,
             },
             catalog,
           );
@@ -1233,7 +1251,13 @@ $("detachCatalog").addEventListener("click", () => {
 });
 $("randomizeBtn").addEventListener("click", () => {
   const seed = randomSeed();
-  setControls(paramsFromSeed(seed, $("imaginedBiosphere").value));
+  setControls(
+    paramsFromSeed(
+      seed,
+      $("imaginedBiosphere").value,
+      /** @type {any} */ ($("imaginedCivilization").value),
+    ),
+  );
   state.seed = seed;
   $("parameterDetails").open = true;
   $("parameterDetails").scrollIntoView({
@@ -1490,9 +1514,13 @@ async function boot() {
       const biosphere = url.searchParams.get("biosphere") ?? "familiar";
       if (!["none", "familiar", "alien"].includes(biosphere))
         throw new Error("Choose None, Familiar or Alien for the biosphere.");
+      const civilization = url.searchParams.get("civilization") ?? "none";
+      if (!CIVILIZATIONS.includes(civilization))
+        throw new Error("Choose a listed imagined civilization.");
       r = seededReport(
         Number(url.searchParams.get("seed")),
         /** @type {"none" | "familiar" | "alien"} */ (biosphere),
+        /** @type {any} */ (civilization),
       );
     } else if (url.searchParams.has("sample"))
       r = sampleReport(url.searchParams.get("sample"));
