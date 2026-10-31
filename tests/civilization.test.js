@@ -87,12 +87,17 @@ test("each view shows the civilization its own way, and lifts only the bans it n
   const [p, f] = world({ civilization: "cities", biosphere: "alien" });
   const surface = imagePrompt(p, f, "surface");
   assert.match(surface, /Imagined civilization: a city of terraced buildings/);
+  // Prominent and in a color the terrain does not share.
+  assert.match(surface, /not a detail to search for/);
+  assert.match(surface, /pale pearlescent white with deep teal accents/);
   assert.match(surface, /No visible inhabitants, vehicles, signs or text/);
   assert.doesNotMatch(surface, /settlements/);
-  assert.match(
-    imagePrompt(p, f, "orbital"),
-    /clusters of warm lights on any night side/,
-  );
+  // Cities need a night side to shine on, even on a rotating world.
+  const orbital = imagePrompt(p, f, "orbital");
+  assert.match(orbital, /Bright clusters of warm golden city lights/);
+  assert.match(orbital, /sharp day–night terminator/);
+  const [v, vf] = world({ civilization: "villages" });
+  assert.doesNotMatch(imagePrompt(v, vf, "orbital"), /terminator/);
   const night = imagePrompt(p, f, "night");
   assert.match(night, /A city's warm glow lights the horizon/);
   assert.doesNotMatch(night, /city lights or|lights on the land/);
@@ -177,4 +182,36 @@ test("Randomize links, field notes and the visitor section carry the civilizatio
     /mind your head/,
   );
   assert.match(locals({ civilization: "ruins" }).value, /Long gone/);
+});
+
+test("the orbital guide globe darkens its night side only where city lights need it", async () => {
+  const { renderOrbitalPixels, ORBITAL_REFERENCE_WIDTH } =
+    await import("../lib/orbital-reference.js");
+  const { createGeography } = await import("../lib/geography.js");
+  const { orbitalView } = await import("../lib/orbital-record.js");
+  const { createCartographyRecord } =
+    await import("../lib/cartography-record.js");
+  // Share of the globe in darkness; each PNG row starts with a filter byte.
+  const darkShare = (changes) => {
+    const [p, f] = world(changes),
+      cartography = createCartographyRecord(p, f),
+      pixels = renderOrbitalPixels(
+        createGeography(p, f, 512, cartography),
+        orbitalView(cartography),
+      ),
+      row = ORBITAL_REFERENCE_WIDTH * 3 + 1;
+    let globe = 0,
+      dark = 0;
+    for (let y = 0; (y + 1) * row <= pixels.length; y++)
+      for (let x = 0; x < ORBITAL_REFERENCE_WIDTH; x++) {
+        const i = y * row + 1 + x * 3;
+        if (pixels[i] === 9 && pixels[i + 1] === 13 && pixels[i + 2] === 16)
+          continue;
+        globe++;
+        if (pixels[i] + pixels[i + 1] + pixels[i + 2] < 60) dark++;
+      }
+    return dark / globe;
+  };
+  assert.ok(darkShare({ civilization: "cities" }) > darkShare({}) + 0.05);
+  assert.equal(darkShare({ civilization: "villages" }), darkShare({}));
 });
